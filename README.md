@@ -119,7 +119,7 @@ Reference hardware and wall-clock time for the paper run are recorded in the art
 
 ## Citation
 
-See `CITATION.cff`. Software DOI: [10.5281/zenodo.23678970](https://doi.org/10.5281/zenodo.23678970)
+See `CITATION.cff`. Software DOI: [10.5281/zenodo.23680302](https://doi.org/10.5281/zenodo.23680302)
 (concept DOI [10.5281/zenodo.23678969](https://doi.org/10.5281/zenodo.23678969); cite the version DOI of the release you use).
 
 ## Previous repository

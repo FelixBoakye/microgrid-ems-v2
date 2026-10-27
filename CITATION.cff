@@ -4,7 +4,7 @@ message: "If you use this software or its results, please cite the article below
 type: software
 title: "Within-Day Commitment Timing, Not Renewable Anticipation, Explains the Value of Forecast-Driven Dispatch in Solar-Battery-Diesel Mini-Grids"
 version: "1.0.2"
-doi: "10.5281/zenodo.23678970"
+doi: "10.5281/zenodo.23680302"
 repository-code: "https://github.com/FelixBoakye/microgrid-ems-v2"
 license: MIT
 authors:
