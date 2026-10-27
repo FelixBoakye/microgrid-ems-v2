@@ -1,0 +1,35 @@
+# CITATION.cff for the microgrid EMS reproduction code (working name: microgrid-ems-v2).
+cff-version: 1.2.0
+message: "If you use this software or its results, please cite the article below (preferred-citation) and this software."
+type: software
+title: "Within-Day Commitment Timing, Not Renewable Anticipation, Explains the Value of Forecast-Driven Dispatch in Solar-Battery-Diesel Mini-Grids"
+version: "1.0.2"
+doi: "10.5281/zenodo.23678970"
+repository-code: "https://github.com/FelixBoakye/microgrid-ems-v2"
+license: MIT
+authors:
+  - family-names: Boakye
+    given-names: Felix Sarkodie
+    affiliation: "University of Energy and Natural Resources (UENR), Sunyani, Ghana"
+keywords:
+  - mini-grid
+  - energy management system
+  - unit commitment
+  - mixed-integer linear programming
+  - forecasting
+  - XGBoost
+  - solar PV
+  - battery storage
+  - diesel generator
+  - Ghana
+preferred-citation:
+  type: article
+  title: "Within-Day Commitment Timing, Not Renewable Anticipation, Explains the Value of Forecast-Driven Dispatch in Solar-Battery-Diesel Mini-Grids"
+  authors:
+    - family-names: Boakye
+      given-names: Felix Sarkodie
+      affiliation: "University of Energy and Natural Resources (UENR), Sunyani, Ghana"
+  journal: "Energy for Sustainable Development"
+  # year:
+  # volume:
+  # doi:

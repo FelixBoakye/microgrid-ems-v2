@@ -1,0 +1,127 @@
+{
+  "direct/direct_pred_2022_seed42.npz": {
+    "copied_from": "results/v2/v42_rerun_2026-10-18c/direct/direct_pred_2022_seed42.npz",
+    "sha256": "29ed20e68603a241efc02c83439c6ffebd6e1c42838a991af856f245e7e8a85c",
+    "what": "direct-forecast cache (no start cost, no dispatch)"
+  },
+  "direct/direct_pred_2023_seed42.npz": {
+    "copied_from": "results/v2/v42_rerun_2026-10-18c/direct/direct_pred_2023_seed42.npz",
+    "sha256": "81d979363d4c532c3f8b4973a995c8328daca2bfa937d0a1c98f8de0ee5d6b73",
+    "what": "direct-forecast cache (no start cost, no dispatch)"
+  },
+  "direct/direct_pred_2024_seed42.npz": {
+    "copied_from": "results/v2/v42_rerun_2026-10-18c/direct/direct_pred_2024_seed42.npz",
+    "sha256": "bb934de20d1bec7a047899b26141c8b697b2623f698e54aa2c02c1d743ab32dc",
+    "what": "direct-forecast cache (no start cost, no dispatch)"
+  },
+  "direct/direct_pred_2025_seed42.npz": {
+    "copied_from": "results/v2/v42_rerun_2026-10-18c/direct/direct_pred_2025_seed42.npz",
+    "sha256": "161b0c124182d3e8f4859a041599dd9db710a50d5c35ea0cd8eb28799ccde885",
+    "what": "direct-forecast cache (no start cost, no dispatch)"
+  },
+  "mix12/direct/direct_pred_2025_seed42.npz": {
+    "copied_from": "results/v2/v42_rerun_2026-10-18c/mix12/direct/direct_pred_2025_seed42.npz",
+    "sha256": "cbed6e9ad11880def295475349fbde4a37b86e5dc9d55be27c691c22e096233d",
+    "what": "direct-forecast cache (no start cost, no dispatch)"
+  },
+  "v1/direct/direct_pred_2025_seed42.npz": {
+    "copied_from": "results/v2/v42_rerun_2026-10-18c/v1/direct/direct_pred_2025_seed42.npz",
+    "sha256": "1da1048ac5e0ddc26930f5b059d1773a101dd7886da8c456d6b09c6746c8e8eb",
+    "what": "direct-forecast cache (no start cost, no dispatch)"
+  },
+  "sensitivity/direct/day_of_week__flat__no_weekend_effect__seed42.npz": {
+    "copied_from": "results/v2/v42_rerun_2026-10-18c/nominal/direct/demand/day_of_week__flat__no_weekend_effect__seed42.npz",
+    "sha256": "68a81697adaec67fbf3bc47e8763dd7e3f222f40c3253b46e6db98e668c3c546",
+    "what": "direct-forecast cache (no start cost, no dispatch)"
+  },
+  "sensitivity/direct/day_of_week__nominal_sat__85___sun__45_seed42.npz": {
+    "copied_from": "results/v2/v42_rerun_2026-10-18c/nominal/direct/demand/day_of_week__nominal_sat__85___sun__45_seed42.npz",
+    "sha256": "161b0c124182d3e8f4859a041599dd9db710a50d5c35ea0cd8eb28799ccde885",
+    "what": "direct-forecast cache (no start cost, no dispatch)"
+  },
+  "sensitivity/direct/day_of_week__strong_sat__70___sun__25_seed42.npz": {
+    "copied_from": "results/v2/v42_rerun_2026-10-18c/nominal/direct/demand/day_of_week__strong_sat__70___sun__25_seed42.npz",
+    "sha256": "f61c7429e3fa72bb46a25714603e5dde889bc39192f30b07e522924057735d49",
+    "what": "direct-forecast cache (no start cost, no dispatch)"
+  },
+  "sensitivity/direct/phi___0_50_seed42.npz": {
+    "copied_from": "results/v2/v42_rerun_2026-10-18c/nominal/direct/demand/phi___0_50_seed42.npz",
+    "sha256": "aa70b5d44309025a7c54cff20378f5d0e46ff6594a0e3b23d43234920924f8b9",
+    "what": "direct-forecast cache (no start cost, no dispatch)"
+  },
+  "sensitivity/direct/phi___0_70_seed42.npz": {
+    "copied_from": "results/v2/v42_rerun_2026-10-18c/nominal/direct/demand/phi___0_70_seed42.npz",
+    "sha256": "161b0c124182d3e8f4859a041599dd9db710a50d5c35ea0cd8eb28799ccde885",
+    "what": "direct-forecast cache (no start cost, no dispatch)"
+  },
+  "sensitivity/direct/phi___0_85_seed42.npz": {
+    "copied_from": "results/v2/v42_rerun_2026-10-18c/nominal/direct/demand/phi___0_85_seed42.npz",
+    "sha256": "e29fd66a502b857127682c1a86f5f359f450c68a8473f50cf3ccbd01be5033d0",
+    "what": "direct-forecast cache (no start cost, no dispatch)"
+  },
+  "sensitivity/direct/temp_response_beta___0_000_seed42.npz": {
+    "copied_from": "results/v2/v42_rerun_2026-10-18c/nominal/direct/demand/temp_response_beta___0_000_seed42.npz",
+    "sha256": "a6e7ce0ccd40fa390f7690bcb46aaa4d13638dd5ac956f36b8077144e391f7ef",
+    "what": "direct-forecast cache (no start cost, no dispatch)"
+  },
+  "sensitivity/direct/temp_response_beta___0_020_seed42.npz": {
+    "copied_from": "results/v2/v42_rerun_2026-10-18c/nominal/direct/demand/temp_response_beta___0_020_seed42.npz",
+    "sha256": "161b0c124182d3e8f4859a041599dd9db710a50d5c35ea0cd8eb28799ccde885",
+    "what": "direct-forecast cache (no start cost, no dispatch)"
+  },
+  "sensitivity/direct/temp_response_beta___0_040_seed42.npz": {
+    "copied_from": "results/v2/v42_rerun_2026-10-18c/nominal/direct/demand/temp_response_beta___0_040_seed42.npz",
+    "sha256": "6c93b7588ea94b6f3dff80f3f34049db6083f2a27753018ba6c74cad375a88f1",
+    "what": "direct-forecast cache (no start cost, no dispatch)"
+  },
+  "sensitivity/direct/nominal_seed0.npz": {
+    "copied_from": "results/v2/v42_rerun_2026-10-18c/nominal/direct/seeds/nominal_seed0.npz",
+    "sha256": "499641bd413deaa273e506e8d329118fbab7c41f149a5413125ff83b81eeda92",
+    "what": "direct-forecast cache (no start cost, no dispatch)"
+  },
+  "sensitivity/direct/nominal_seed1.npz": {
+    "copied_from": "results/v2/v42_rerun_2026-10-18c/nominal/direct/seeds/nominal_seed1.npz",
+    "sha256": "294d6791975d014c17d1c2b9363a60b0b90c3f71c09dcbe656c47f163e3369c7",
+    "what": "direct-forecast cache (no start cost, no dispatch)"
+  },
+  "sensitivity/direct/nominal_seed2.npz": {
+    "copied_from": "results/v2/v42_rerun_2026-10-18c/nominal/direct/seeds/nominal_seed2.npz",
+    "sha256": "ab733fd0c60027e0195578cb8f67c2aa026d6f2f601ffe0d6c60be52012e1db8",
+    "what": "direct-forecast cache (no start cost, no dispatch)"
+  },
+  "sensitivity/direct/nominal_seed3.npz": {
+    "copied_from": "results/v2/v42_rerun_2026-10-18c/nominal/direct/seeds/nominal_seed3.npz",
+    "sha256": "2273c4c256ec51c350f19f84f7ee37139082bdf92d0becd49681f9554effdcbc",
+    "what": "direct-forecast cache (no start cost, no dispatch)"
+  },
+  "sensitivity/direct/nominal_seed4.npz": {
+    "copied_from": "results/v2/v42_rerun_2026-10-18c/nominal/direct/seeds/nominal_seed4.npz",
+    "sha256": "3e8e3de4bba76a4e156d980b91615cb0cb0b884936ccb451ba2a6bd37b648d63",
+    "what": "direct-forecast cache (no start cost, no dispatch)"
+  },
+  "sensitivity/direct/nominal_seed5.npz": {
+    "copied_from": "results/v2/v42_rerun_2026-10-18c/nominal/direct/seeds/nominal_seed5.npz",
+    "sha256": "3811921d470da5a7482d182fe5400386cbd00ea9d6e6ab417ea58c31c962df43",
+    "what": "direct-forecast cache (no start cost, no dispatch)"
+  },
+  "sensitivity/direct/nominal_seed6.npz": {
+    "copied_from": "results/v2/v42_rerun_2026-10-18c/nominal/direct/seeds/nominal_seed6.npz",
+    "sha256": "1035cbac1f2883624d72867970b1ddb94cdb9d8e3c06a8d7c0798ca46c312839",
+    "what": "direct-forecast cache (no start cost, no dispatch)"
+  },
+  "sensitivity/direct/nominal_seed7.npz": {
+    "copied_from": "results/v2/v42_rerun_2026-10-18c/nominal/direct/seeds/nominal_seed7.npz",
+    "sha256": "1f27a7fdc01dc0409c79aef3627790c7625b235a1383c7d987ab50f7112fed90",
+    "what": "direct-forecast cache (no start cost, no dispatch)"
+  },
+  "sensitivity/direct/nominal_seed8.npz": {
+    "copied_from": "results/v2/v42_rerun_2026-10-18c/nominal/direct/seeds/nominal_seed8.npz",
+    "sha256": "5ecefaebeab5a68e0c45191ba461c6ab67f2e8090b10ed013332a93bfb93a15b",
+    "what": "direct-forecast cache (no start cost, no dispatch)"
+  },
+  "sensitivity/direct/nominal_seed9.npz": {
+    "copied_from": "results/v2/v42_rerun_2026-10-18c/nominal/direct/seeds/nominal_seed9.npz",
+    "sha256": "114935e0b90b55255dfc8eb94dc2564bfa91bba28175c7d03921dc132e5e4018",
+    "what": "direct-forecast cache (no start cost, no dispatch)"
+  }
+}

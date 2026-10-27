@@ -1,0 +1,21 @@
+{
+  "load_variant": "v1",
+  "hours": 8760,
+  "soc_init_kwh": 12.999999999999996,
+  "oracle_diesel_kwh": 21480.058593454844,
+  "baseline_diesel_kwh": 21480.058593454844,
+  "diesel_difference_kwh": 0.0,
+  "oracle_objective": 116099.6236415099,
+  "baseline_objective": 116099.6236415099,
+  "objective_rel_difference": 0.0,
+  "objective_oracle_14sf": "1.1609962364151e+05",
+  "objective_baseline_14sf": "1.1609962364151e+05",
+  "hours_diesel_differs": {
+    "1e-09": 3748,
+    "1e-06": 3748,
+    "0.001": 3748
+  },
+  "hours_any_flow_differs_1e-6": 6320,
+  "lp_oracle_full_year_solve_s": 0.5123754000014742,
+  "note": "baseline called with uc_parity=False (flat model), oracle = lp_dispatch full-year LP"
+}

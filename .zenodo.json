@@ -1,0 +1,33 @@
+{
+  "title": "microgrid-ems-v2: Reproduction code and data for \"Within-Day Commitment Timing, Not Renewable Anticipation, Explains the Value of Forecast-Driven Dispatch in Solar-Battery-Diesel Mini-Grids\"",
+  "upload_type": "software",
+  "version": "1.0.2",
+  "description": "Reproduction code and generated results for a rolling mixed-integer (MILP) energy management study of an islanded 90 kWp / 130 kWh / 40 kW solar-battery-diesel mini-grid in the Northern Region of Ghana. XGBoost load and PV forecasts, commitment-aware generator model, expanding-window walk-forward evaluation over 2022-2025. Weather: NASA POWER hourly reanalysis, 2018-2025. Demand: synthetic load_v2 profile (no metered site data; a stated limitation). Code: MIT. Generated data and results: CC BY 4.0.",
+  "creators": [
+    {
+      "name": "Boakye, Felix Sarkodie",
+      "affiliation": "University of Energy and Natural Resources (UENR), Sunyani, Ghana"
+    }
+  ],
+  "license": "MIT",
+  "access_right": "open",
+  "keywords": [
+    "mini-grid",
+    "energy management system",
+    "unit commitment",
+    "mixed-integer linear programming",
+    "XGBoost",
+    "solar PV",
+    "battery storage",
+    "diesel generator",
+    "Ghana"
+  ],
+  "related_identifiers": [
+    {
+      "identifier": "https://github.com/FelixBoakye/microgrid-ems-v2",
+      "relation": "isSupplementTo",
+      "scheme": "url"
+    }
+  ],
+  "notes": "Data and results are licensed CC BY 4.0 (see LICENSE-DATA.md). Add the article DOI to related_identifiers (relation isSupplementTo) once published."
+}

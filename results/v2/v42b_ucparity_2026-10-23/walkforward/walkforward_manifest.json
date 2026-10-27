@@ -1,0 +1,20 @@
+{
+  "python": "3.12.10",
+  "platform": "Windows-11-10.0.26200-SP0",
+  "numpy": "2.5.1",
+  "pandas": "3.0.3",
+  "scipy": "1.18.0",
+  "scikit-learn": "1.9.0",
+  "xgboost": "3.3.0",
+  "timestamp": "2026-10-23T05:16:24",
+  "git_commit": "180ceebc91d362dc69467447ad60016fa088f815",
+  "test_years": [
+    2022,
+    2023,
+    2024,
+    2025
+  ],
+  "variant": "v2",
+  "subdir": "walkforward",
+  "forecast": "direct per-horizon"
+}

@@ -1,0 +1,101 @@
+# ---- Python ----
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg
+*.egg-info/
+.eggs/
+build/
+dist/
+wheels/
+pip-wheel-metadata/
+*.manifest
+*.spec
+pip-log.txt
+pip-delete-this-directory.txt
+
+# ---- Virtual environments ----
+.venv/
+venv/
+env/
+ENV/
+.python-version
+# conda local env folders (if created inside the repo)
+.conda/
+
+# ---- Secrets and local config ----
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# ---- Caches and tool output ----
+.cache/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.hypothesis/
+.tox/
+.nox/
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+*.cover
+*.log
+
+# ---- Jupyter ----
+.ipynb_checkpoints/
+*/.ipynb_checkpoints/*
+
+# ---- OS files ----
+.DS_Store
+._*
+Thumbs.db
+ehthumbs.db
+desktop.ini
+$RECYCLE.BIN/
+*~
+
+# ---- IDE / editor folders ----
+.vscode/
+.idea/
+*.swp
+*.swo
+.spyproject/
+.spyderproject
+.ropeproject/
+*.sublime-project
+*.sublime-workspace
+
+# ---- Large regenerable data (python reproduce.py --stage data) ----
+data/*_ml_dataset.csv
+data/ml_dataset.csv
+data/*train.csv
+data/*test.csv
+data/*validation.csv
+
+# ---- Local review notes (not for publication) ----
+_review/
+
+# ---- Personal / packaging (never publish) ----
+voice_notes/
+**/voice_notes/
+*.mp3
+*.wav
+*.m4a
+FOR_FELIX/
+**/FOR_FELIX/
+_review/
+**/_review/
+**/REVIEW*/
+**/notes/
+**/private/
+**/handoff/
+*FOR_FELIX*
+*REVIEW_FOR*
+*.pid
+*.lock
+!requirements.lock

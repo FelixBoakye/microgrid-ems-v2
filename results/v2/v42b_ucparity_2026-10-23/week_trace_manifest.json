@@ -1,0 +1,30 @@
+{
+  "python": "3.12.10",
+  "platform": "Windows-11-10.0.26200-SP0",
+  "numpy": "2.5.1",
+  "pandas": "3.0.3",
+  "scipy": "1.18.0",
+  "scikit-learn": "1.9.0",
+  "xgboost": "3.3.0",
+  "timestamp": "2026-10-23T20:53:59",
+  "git_commit": "180ceebc91d362dc69467447ad60016fa088f815",
+  "selection_criterion": "Among all complete Mon-Sun weeks of the test year, the week minimising |mean daily PV energy - annual median daily PV energy| / annual median + |mean daily peak load - annual median daily peak load| / annual median.",
+  "week_start": "2025-04-14 00:00:00",
+  "week_end": "2025-04-20 23:00:00",
+  "week_start_index": 2472,
+  "hours": 168,
+  "controllers": [
+    "oracle",
+    "baseline",
+    "heuristic",
+    "roll24"
+  ],
+  "score": 0.03762358907527559,
+  "dev_pv": 0.018826440669828495,
+  "dev_peak": 0.018797148405447092,
+  "week_mean_daily_pv_kwh": 384.7899800051872,
+  "week_mean_daily_peak_kw": 27.832389234545435,
+  "annual_median_daily_pv_kwh": 377.67961710162,
+  "annual_median_daily_peak_kw": 27.31887233695817,
+  "n_candidate_weeks": 51
+}

@@ -1,0 +1,15 @@
+{
+  "python": "3.12.10",
+  "platform": "Windows-11-10.0.26200-SP0",
+  "numpy": "2.5.1",
+  "pandas": "3.0.3",
+  "scipy": "1.18.0",
+  "scikit-learn": "1.9.0",
+  "xgboost": "3.3.0",
+  "timestamp": "2026-10-23T07:56:02",
+  "git_commit": "180ceebc91d362dc69467447ad60016fa088f815",
+  "source": "walk-forward fold 2025 (walkforward)",
+  "n_boot": 2000,
+  "start_cost_ghs": 33.75,
+  "fold_subdir": "walkforward"
+}

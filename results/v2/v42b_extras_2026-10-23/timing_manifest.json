@@ -1,0 +1,31 @@
+{
+  "python": "3.12.10",
+  "platform": "Windows-11-10.0.26200-SP0",
+  "numpy": "2.5.1",
+  "pandas": "3.0.3",
+  "scipy": "1.18.0",
+  "scikit-learn": "1.9.0",
+  "xgboost": "3.3.0",
+  "timestamp": "2026-10-23T22:56:28",
+  "git_commit": "0d210e6afdd72c272738cbcdbe4203e1f1dbc7ce",
+  "hardware": {
+    "cpu": "Intel64 Family 6 Model 158 Stepping 9, GenuineIntel",
+    "logical_cores": 8,
+    "platform": "Windows-11-10.0.26200-SP0"
+  },
+  "solvers": {
+    "HiGHS": "via scipy 1.18.0",
+    "scipy": "1.18.0",
+    "numpy": "2.5.1",
+    "xgboost": "3.3.0",
+    "scikit_learn": "1.9.0",
+    "python": "3.12.10"
+  },
+  "sampling": {
+    "ga_windows": 5,
+    "lp_windows": 200,
+    "milp_windows": 300,
+    "note": "Per-window samples; annual figures are extrapolated as mean_s * windows_per_year. Nothing was run over the full year purely to measure time. The full-year oracle LP is a single solve and is timed directly."
+  },
+  "machine_contended": false
+}

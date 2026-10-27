@@ -1,0 +1,22 @@
+{
+  "raw_input": {
+    "file": "POWER_Point_Hourly_20180101_20251231_009d40N_000d84W_LST.csv",
+    "bytes": 2794235,
+    "sha256": "08a1d1ac126e656effc4d2cb6a6f66cf10f6d54e0ed61dcf2cf380efac0fff4d",
+    "source": "NASA POWER hourly, https://power.larc.nasa.gov/data-access-viewer/",
+    "coordinates": "9.4008N, 0.8393W (Tamale, Northern Ghana)",
+    "parameters": "ALLSKY_SFC_SW_DWN, T2M, RH2M, WS10M, CLRSKY_SFC_SW_DWN",
+    "range": "2018-01-01 to 2025-12-31, 70128 hourly records",
+    "note": "Download date was not recorded. The earlier timestamp is from the first local copy; the later one is when the file was copied into this package. Both files are byte-identical (sha256 verified).",
+    "identical_to_authors_copy": true,
+    "authors_copy_modified_utc": "2026-06-24T20:57:14.616161+00:00",
+    "repo_copy_modified_utc": "2026-08-13T00:23:45.346735Z"
+  },
+  "environment": {
+    "python": "3.12.10",
+    "platform": "Windows-11-10.0.26200-SP0",
+    "n_pinned_packages": 35,
+    "lockfile": "requirements.lock"
+  },
+  "git_commit": "5a857b6d502bad22b880537d3a740fd5067fbe98"
+}

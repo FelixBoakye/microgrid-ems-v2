@@ -1,0 +1,26 @@
+{
+  "python": "3.12.10",
+  "platform": "Windows-11-10.0.26200-SP0",
+  "numpy": "2.5.1",
+  "pandas": "3.0.3",
+  "scipy": "1.18.0",
+  "scikit-learn": "1.9.0",
+  "xgboost": "3.3.0",
+  "timestamp": "2026-10-23T15:54:10",
+  "git_commit": "180ceebc91d362dc69467447ad60016fa088f815",
+  "configs": [
+    "oracle",
+    "baseline",
+    "heuristic",
+    "roll24"
+  ],
+  "cost_model": "corrected [sourced_mean]",
+  "start_cost_ghs": 33.75,
+  "heuristic": {
+    "threshold": 1.0,
+    "bank_to_soc": 0.5
+  },
+  "heuristic_selected_on": "2024 full year (walk-forward rule)",
+  "fuel_A": 0.0454,
+  "fuel_B": 0.3005
+}

@@ -1,0 +1,12 @@
+{
+  "git_commit": "180ceebc91d362dc69467447ad60016fa088f815",
+  "start_cost_ghs": 33.75,
+  "check_start_cost_ghs": 50.625,
+  "python": "3.12.10",
+  "out": "<repo>\\results\\v2\\v42b_ucparity_2026-10-23",
+  "source_18c": "<repo>\\results\\v2\\v42_rerun_2026-10-18c",
+  "smoke_hours": null,
+  "heuristic_rule": "year-1 (2024) selection, walk-forward THETAS x PSIS",
+  "uc_parity": true,
+  "uc_rules": "min stable load, min up/down from GensetModel; surplus -> battery then curtail"
+}

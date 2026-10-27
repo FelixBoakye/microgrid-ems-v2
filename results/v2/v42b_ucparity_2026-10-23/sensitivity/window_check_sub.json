@@ -1,0 +1,23 @@
+{
+  "label": "nominal (2136 h window)",
+  "theta": 1.0,
+  "psi": 0.5,
+  "heuristic_selected_on": "2024 full year (walk-forward rule)",
+  "start_cost_ghs": 33.75,
+  "seconds": 458.3,
+  "cost_baseline": 65940.39000917358,
+  "cost_heuristic": 64453.430796119894,
+  "cost_oracle": 45863.20030094311,
+  "cost_roll24": 55556.36469956124,
+  "milp_vs_baseline_pct": 15.747594620183047,
+  "milp_vs_heuristic_pct": 13.803867360764688,
+  "heur_vs_baseline_pct": 2.255005183995462,
+  "milp_premium_vs_oracle_pct": 21.13494988359723,
+  "milp_run_h": 287,
+  "milp_LF_pct": 58.79454419593147,
+  "milp_LPSP_pct": 0.0,
+  "uc_parity": true,
+  "baseline_min_down_overrides": 11,
+  "baseline_below_oracle": false,
+  "heuristic_below_oracle": false
+}

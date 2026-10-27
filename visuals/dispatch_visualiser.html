@@ -1,0 +1,1544 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dispatch visualiser — generator output banked vs served</title>
+<style>
+  :root {
+    --bg: #0b0f16;
+    --bg2: #111722;
+    --panel: #141b27;
+    --panel2: #1a2332;
+    --line: #2a3548;
+    --text: #e8eef6;
+    --muted: #8b97a8;
+    --faint: #5c6b7e;
+    --pv: #e8b84a;
+    --gen: #f07167;
+    --bank: #ff4d6d;
+    --bat: #2ec4b6;
+    --load: #7ec8e3;
+    --curt: #7a8494;
+    --wet: #fb923c;
+    --ok: #4ade80;
+    --bad: #f87171;
+    --night: rgba(8, 12, 20, 0.55);
+    --day: rgba(232, 184, 74, 0.06);
+    --shadow: 0 10px 40px rgba(0,0,0,.35);
+    --font: "Segoe UI", ui-sans-serif, system-ui, sans-serif;
+    --mono: "Cascadia Mono", "Segoe UI Mono", ui-monospace, monospace;
+  }
+  html[data-theme="light"] {
+    --bg: #f4f1ea;
+    --bg2: #ece7dc;
+    --panel: #fffcf6;
+    --panel2: #f7f1e6;
+    --line: #d9d0c0;
+    --text: #1c2430;
+    --muted: #5c6570;
+    --faint: #8a8478;
+    --pv: #c48912;
+    --gen: #c4453c;
+    --bank: #d11d4a;
+    --bat: #0f7f76;
+    --load: #1d6a8a;
+    --curt: #7a8494;
+    --wet: #c05612;
+    --ok: #178a4a;
+    --bad: #c23030;
+    --night: rgba(40, 50, 70, 0.10);
+    --day: rgba(196, 137, 18, 0.08);
+    --shadow: 0 8px 24px rgba(80, 60, 20, .08);
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font);
+    display: flex;
+    flex-direction: column;
+    min-height: 100%;
+    overflow: hidden;
+  }
+  button, select, input { font-family: inherit; }
+  button {
+    background: var(--panel2);
+    color: var(--text);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 6px 11px;
+    font-size: 12px;
+    cursor: pointer;
+    letter-spacing: .01em;
+  }
+  button:hover { border-color: var(--muted); }
+  button.on, button[aria-pressed="true"] {
+    background: color-mix(in srgb, var(--load) 22%, var(--panel2));
+    border-color: color-mix(in srgb, var(--load) 55%, var(--line));
+  }
+  button.danger.on { background: color-mix(in srgb, var(--bank) 18%, var(--panel2)); border-color: var(--bank); }
+  header {
+    display: flex; align-items: flex-start; justify-content: space-between;
+    gap: 16px; padding: 12px 16px 8px; flex-wrap: wrap;
+    border-bottom: 1px solid var(--line);
+    background: var(--bg2);
+  }
+  header h1 { font-size: 15px; font-weight: 650; margin: 0 0 2px; letter-spacing: .01em; }
+  header .sub { font-size: 11.5px; color: var(--muted); line-height: 1.4; max-width: 720px; }
+  .tools { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+  .scale {
+    display: flex; gap: 12px; align-items: center;
+    font-size: 11px; color: var(--muted);
+    padding: 4px 8px; border: 1px solid var(--line); border-radius: 8px;
+    background: var(--panel);
+  }
+  .scale i {
+    display: inline-block; height: 0; border-top-style: solid; border-top-color: var(--text);
+    vertical-align: middle; margin-right: 6px;
+  }
+  #banner {
+    display: none; padding: 8px 16px; font-size: 12px;
+    background: color-mix(in srgb, var(--bad) 18%, var(--bg));
+    color: var(--bad); border-bottom: 1px solid var(--bad);
+  }
+  #banner.show { display: block; }
+  #banner.ok {
+    display: block; color: var(--ok);
+    background: color-mix(in srgb, var(--ok) 10%, var(--bg));
+    border-color: color-mix(in srgb, var(--ok) 40%, var(--line));
+  }
+  .toolbar {
+    display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
+    padding: 8px 16px; border-bottom: 1px solid var(--line);
+  }
+  .chips { display: flex; gap: 6px; flex-wrap: wrap; }
+  .chip {
+    font-size: 11px; padding: 5px 10px; border-radius: 999px;
+    border: 1px solid var(--line); background: var(--panel); color: var(--muted); cursor: pointer;
+  }
+  .chip.on { color: var(--text); border-color: var(--c, var(--load)); background: color-mix(in srgb, var(--c, var(--load)) 16%, var(--panel)); }
+  .sep { width: 1px; height: 22px; background: var(--line); }
+  #stage {
+    flex: 1; min-height: 0;
+    display: grid; gap: 10px; padding: 10px 16px;
+    grid-template-columns: repeat(var(--cols, 2), minmax(0, 1fr));
+  }
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    box-shadow: var(--shadow);
+    display: flex; flex-direction: column; min-width: 0; min-height: 0;
+    overflow: hidden;
+  }
+  .phd {
+    display: flex; justify-content: space-between; align-items: flex-start;
+    gap: 8px; padding: 10px 12px 0;
+  }
+  .phd h2 { margin: 0; font-size: 13px; font-weight: 650; }
+  .phd .lab { font-size: 10.5px; color: var(--muted); margin-top: 2px; line-height: 1.3; }
+  .banked { text-align: right; }
+  .banked .n {
+    font-variant-numeric: tabular-nums; font-size: 28px; font-weight: 700;
+    letter-spacing: -.03em; color: var(--bank); line-height: 1;
+  }
+  .banked .k { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; }
+  .panel svg.sch { width: 100%; flex: 1; min-height: 180px; display: block; }
+  .counters {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px 10px;
+    padding: 6px 12px 8px; font-size: 11px; border-top: 1px solid var(--line);
+    background: var(--panel2);
+  }
+  .counters b { display: block; font-size: 12.5px; font-variant-numeric: tabular-nums; font-weight: 650; }
+  .counters span { color: var(--muted); font-size: 10px; }
+  .cons {
+    display: flex; justify-content: space-between; gap: 8px; align-items: center;
+    padding: 6px 12px 8px; font-size: 10.5px; font-variant-numeric: tabular-nums;
+    color: var(--muted); border-top: 1px solid var(--line);
+  }
+  .tick { font-weight: 700; letter-spacing: .04em; }
+  .tick.ok { color: var(--ok); }
+  .tick.bad { color: var(--bad); }
+  #ann {
+    display: none; gap: 8px; padding: 0 16px 8px; flex-wrap: wrap;
+  }
+  #ann.show { display: flex; }
+  .ann {
+    flex: 1; min-width: 240px; background: var(--panel); border: 1px solid var(--line);
+    border-left: 3px solid var(--gen); border-radius: 8px; padding: 8px 12px; font-size: 11.5px;
+  }
+  .ann h3 { margin: 0 0 4px; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--gen); }
+  .ann .row { display: flex; flex-wrap: wrap; gap: 10px 16px; color: var(--text); }
+  .ann .row b { font-variant-numeric: tabular-nums; }
+  .ann .note { color: var(--faint); font-size: 10.5px; margin-top: 4px; }
+  #tlwrap {
+    padding: 0 16px 10px; display: flex; flex-direction: column; gap: 6px;
+    background: var(--bg2); border-top: 1px solid var(--line);
+  }
+  #tlbox { position: relative; height: 118px; }
+  #tl-static { pointer-events: none; }
+  #tlbox canvas { position: absolute; inset: 0; width: 100%; height: 100%; cursor: ew-resize; }
+  #transport {
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding-bottom: 4px;
+  }
+  #clock {
+    font-variant-numeric: tabular-nums; font-size: 14px; font-weight: 650; min-width: 260px;
+  }
+  #clock small { color: var(--muted); font-weight: 500; font-size: 12px; }
+  .legend { display: flex; gap: 12px; font-size: 10.5px; color: var(--muted); margin-left: auto; }
+  .legend i { display: inline-block; width: 10px; height: 8px; border-radius: 2px; margin-right: 4px; vertical-align: middle; }
+  .modal {
+    display: none; position: fixed; inset: 0; background: rgba(0,0,0,.45);
+    z-index: 20; align-items: center; justify-content: center;
+  }
+  .modal.show { display: flex; }
+  .modal .box {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
+    padding: 16px; width: min(420px, 92vw); box-shadow: var(--shadow);
+  }
+  .modal h3 { margin: 0 0 10px; font-size: 14px; }
+  .modal label { display: block; font-size: 12px; color: var(--muted); margin: 8px 0 4px; }
+  .modal input, .modal select {
+    width: 100%; background: var(--bg); color: var(--text); border: 1px solid var(--line);
+    border-radius: 6px; padding: 6px 8px;
+  }
+  .modal .row { display: flex; gap: 8px; margin-top: 14px; justify-content: flex-end; }
+  .foot {
+    font-size: 10.5px; color: var(--faint); padding: 0 16px 8px; background: var(--bg2);
+  }
+  .unmet-flag { fill: var(--bad); }
+</style>
+<script>
+window.addEventListener("error", function (e) {
+  var b = document.getElementById("banner");
+  if (!b) return;
+  b.className = "show";
+  b.textContent = (e.message || String(e)) + " @" + (e.lineno || "");
+});
+</script>
+</head>
+<body>
+<header>
+  <div>
+    <h1>Dispatch visualiser — generator output banked vs served directly</h1>
+    <div class="sub">90 kWp / 130 kWh / 40 kW islanded mini-grid, Tamale. Reads stored dispatch only.
+      Banked fraction = min(genset, battery charge) / genset — the paper’s mechanistic split, not an estimate.</div>
+  </div>
+  <div class="tools">
+    <div class="scale" id="scale" title="Stroke width is proportional to instantaneous kW and is not renormalised per hour"></div>
+    <button type="button" id="btn-load">Load CSV</button>
+    <button type="button" id="btn-theme">Light</button>
+    <button type="button" id="btn-png">Export PNG</button>
+    <button type="button" id="btn-range">Export range</button>
+  </div>
+</header>
+<div id="banner"></div>
+<div class="toolbar">
+  <div class="chips" id="modes">
+    <button type="button" data-mode="1">Single</button>
+    <button type="button" data-mode="2" class="on">2-up</button>
+    <button type="button" data-mode="4">4-up</button>
+  </div>
+  <div class="sep"></div>
+  <div class="chips" id="ctrl-chips"></div>
+  <div class="sep"></div>
+  <button type="button" id="btn-contrast">Jump to contrast hour</button>
+</div>
+<section id="stage"></section>
+<section id="ann"></section>
+<section id="tlwrap">
+  <div id="tlbox">
+    <canvas id="tl-static"></canvas>
+    <canvas id="tl-over"></canvas>
+  </div>
+  <div id="transport">
+    <button type="button" id="btn-back" title="Step back">◀</button>
+    <button type="button" id="btn-play">Play</button>
+    <button type="button" id="btn-fwd" title="Step forward">▶</button>
+    <div class="chips" id="speeds">
+      <button type="button" data-sp="1" class="on">1×</button>
+      <button type="button" data-sp="4">4×</button>
+      <button type="button" data-sp="16">16×</button>
+    </div>
+    <div id="clock"></div>
+    <div class="legend">
+      <span><i style="background:var(--pv)"></i>PV → load</span>
+      <span><i style="background:var(--gen)"></i>Genset → load</span>
+      <span><i style="background:var(--bat)"></i>Battery → load</span>
+      <span><i style="background:var(--bank)"></i>Genset → battery</span>
+      <span><i style="background:var(--load)"></i>Load</span>
+    </div>
+  </div>
+</section>
+<div class="foot" id="foot">No data loaded.</div>
+<input type="file" id="file" accept=".csv,text/csv" hidden>
+<div class="modal" id="modal">
+  <div class="box">
+    <h3>Export frame sequence</h3>
+    <p style="font-size:12px;color:var(--muted);margin:0 0 8px">PNG zip of the on-screen comparison, one file per hour. Renders the same schematics as the live view.</p>
+    <label>From</label>
+    <select id="ex-from"></select>
+    <label>To</label>
+    <select id="ex-to"></select>
+    <div class="row">
+      <button type="button" id="ex-cancel">Cancel</button>
+      <button type="button" id="ex-go">Download ZIP</button>
+    </div>
+    <div id="ex-prog" style="font-size:11px;color:var(--muted);margin-top:8px"></div>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  const SYS = {
+    batKwh: 130,
+    socMin: 13,
+    socMax: 130,
+    ratedKw: 40,
+    minLoad: 0.30,
+    pvKwp: 90,
+    // Affine curve F = A·P_rated + B·P  [L/h]. A,B match week_trace_summary.csv
+    // (the curve in force when that trace was written): A=0.080, B=0.246.
+    fuelA: 0.080,
+    fuelB: 0.246,
+    pxPerKw: 0.38,
+    consTol: 1e-6
+  };
+
+  const ORDER = ["baseline", "heuristic", "roll24", "oracle"];
+  const SHORT = {
+    baseline: "Baseline",
+    heuristic: "Heuristic",
+    roll24: "Rolling MILP",
+    oracle: "Ceiling"
+  };
+  const CHIP_C = {
+    baseline: "#94a3b8",
+    heuristic: "#e8b84a",
+    roll24: "#7ec8e3",
+    oracle: "#c4b5fd"
+  };
+
+  const state = {
+    data: null,
+    hour: 0,
+    playing: false,
+    speed: 1,
+    mode: 2,
+    visible: ["heuristic", "roll24"],
+    theme: "dark",
+    sourceName: "embedded week_trace.csv"
+  };
+
+  const $ = (s, el) => (el || document).querySelector(s);
+  const $$ = (s, el) => [...(el || document).querySelectorAll(s)];
+  const ns = "http://www.w3.org/2000/svg";
+  function txt(node, s) { if (node) node.textContent = s; }
+  function htmlEl(tag, cls) {
+    const n = document.createElement(tag);
+    if (cls) n.className = cls;
+    return n;
+  }
+
+  function z(x) {
+    const n = +x;
+    if (!isFinite(n) || Math.abs(n) < 1e-9) return 0;
+    return n;
+  }
+  function fmt(n, d) {
+    if (n == null || !isFinite(n)) return "—";
+    return Number(n).toLocaleString("en-GB", { minimumFractionDigits: d, maximumFractionDigits: d });
+  }
+  function fmtK(n) { return fmt(n, Math.abs(n) >= 100 ? 0 : 1); }
+  function pad(n) { return String(n).padStart(2, "0"); }
+  function parseDT(s) {
+    const m = /^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})/.exec(String(s).trim());
+    if (!m) return new Date(s);
+    return new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5]);
+  }
+  function stamp(d) {
+    const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+    const mons = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    return days[d.getDay()] + " " + pad(d.getDate()) + " " + mons[d.getMonth()] + " " + d.getFullYear()
+      + "  " + pad(d.getHours()) + ":00";
+  }
+  function css(name) {
+    return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  }
+  function palette() {
+    return {
+      pv: css("--pv"), gen: css("--gen"), bank: css("--bank"), bat: css("--bat"),
+      load: css("--load"), curt: css("--curt"), wet: css("--wet"), ok: css("--ok"),
+      bad: css("--bad"), text: css("--text"), muted: css("--muted"), faint: css("--faint"),
+      line: css("--line"), panel: css("--panel"), bg: css("--bg"), night: css("--night"),
+      day: css("--day"), off: state.theme === "light" ? "#c5c0b5" : "#3a4454"
+    };
+  }
+
+  function el(tag, attrs, kids) {
+    const n = document.createElementNS(ns, tag);
+    if (attrs) for (const k in attrs) {
+      if (attrs[k] == null || attrs[k] === false) continue;
+      if (k === "text") n.textContent = attrs[k];
+      else n.setAttribute(k, attrs[k]);
+    }
+    if (kids) for (const c of kids) n.appendChild(c);
+    return n;
+  }
+
+  function parseCSV(text) {
+    const lines = text.replace(/^\uFEFF/, "").split(/\r?\n/).filter(l => l.trim().length);
+    if (!lines) throw new Error("empty CSV");
+    const split = (line) => {
+      const out = []; let cur = "", q = false;
+      for (let i = 0; i < line.length; i++) {
+        const ch = line[i];
+        if (q) {
+          if (ch === '"') { if (line[i + 1] === '"') { cur += '"'; i++; } else q = false; }
+          else cur += ch;
+        } else if (ch === '"') q = true;
+        else if (ch === ",") { out.push(cur); cur = ""; }
+        else cur += ch;
+      }
+      out.push(cur);
+      return out;
+    };
+    const header = split(lines[0]).map(h => h.trim());
+    const rows = [];
+    for (let i = 1; i < lines.length; i++) {
+      const parts = split(lines[i]);
+      if (parts.length === 1 && !parts[0].trim()) continue;
+      const o = {};
+      for (let j = 0; j < header.length; j++) o[header[j]] = parts[j] == null ? "" : parts[j];
+      rows.push(o);
+    }
+    return { header, rows };
+  }
+
+  function col(row, names) {
+    for (const n of names) if (row[n] != null && row[n] !== "") return row[n];
+    return "";
+  }
+
+  function derive(pv, load, ch, dc, g, unmet, curt) {
+    pv = z(pv); load = z(load); ch = z(ch); dc = z(dc); g = z(g); unmet = z(unmet); curt = z(curt);
+    const g2b = Math.min(g, ch);
+    const g2l = g - g2b;
+    const p2b = ch - g2b;
+    const p2l = Math.min(pv - curt - p2b, load);
+    return {
+      pv, load, ch, dc, g, unmet, curt, g2b, g2l, p2b, p2l,
+      rPv: (p2l + p2b + curt) - pv,
+      rG: (g2l + g2b) - g,
+      rL: (p2l + g2l + dc + unmet) - load
+    };
+  }
+
+  function indexRows(rows, header) {
+    const has = (n) => header.indexOf(n) >= 0;
+    const need = ["pv_available_kW", "load_kW", "battery_charge_kW", "genset_kW"];
+    const missing = need.filter(n => !has(n));
+    if (missing.length) {
+      throw new Error("Cannot form the banked split — missing column(s): " + missing.join(", ")
+        + ". The front end will not estimate them. Export those columns and reload.");
+    }
+    const groups = new Map();
+    for (const r of rows) {
+      const c = col(r, ["controller"]) || "series";
+      if (!groups.has(c)) groups.set(c, []);
+      groups.get(c).push(r);
+    }
+    const names = [];
+    for (const n of ORDER) if (groups.has(n)) names.push(n);
+    for (const n of groups.keys()) if (names.indexOf(n) < 0) names.push(n);
+
+    const n0 = groups.get(names[0]).length;
+    for (const n of names) if (groups.get(n).length !== n0) {
+      throw new Error("Controllers have different row counts — expected a rectangular trace.");
+    }
+
+    const times = groups.get(names[0]).map(r => parseDT(col(r, ["datetime"])));
+    const ctrl = {};
+    const fail = [];
+
+    for (const name of names) {
+      const rs = groups.get(name);
+      const N = rs.length;
+      const A = () => new Float64Array(N);
+      const s = {
+        label: col(rs[0], ["controller_label"]) || name,
+        pv: A(), load: A(), ch: A(), dc: A(), soc: A(), g: A(),
+        on: new Uint8Array(N), lf: A(), unmet: A(), curt: A(),
+        g2b: A(), g2l: A(), p2b: A(), p2l: A(),
+        rPv: A(), rG: A(), rL: A(),
+        fuel: A(),
+        cumFuel: A(), cumG2b: A(), cumG: A(), cumCh: A(), cumDc: A(),
+        cumCurt: A(), cumRun: A(), cumStarts: A(),
+        isStart: new Uint8Array(N),
+        hoursOff: A()
+      };
+      let lastOn = -1, prevOn = 0;
+      let fF = 0, fB = 0, fG = 0, fC = 0, fD = 0, fU = 0, fR = 0, fS = 0;
+      for (let i = 0; i < N; i++) {
+        const r = rs[i];
+        const pv = z(col(r, ["pv_available_kW"]));
+        const load = z(col(r, ["load_kW"]));
+        const ch = z(col(r, ["battery_charge_kW"]));
+        const dc = z(col(r, ["battery_discharge_kW"]));
+        const soc = has("soc_kWh") ? z(col(r, ["soc_kWh"])) : NaN;
+        const g = z(col(r, ["genset_kW"]));
+        const onRaw = col(r, ["genset_on"]);
+        const on = onRaw === "" ? (g > 1e-9 ? 1 : 0) : (z(onRaw) > 0 ? 1 : 0);
+        let lf = col(r, ["genset_load_factor"]);
+        lf = lf === "" || lf == null ? (on ? g / SYS.ratedKw : NaN) : z(lf);
+        const unmet = has("unmet_load_kW") ? z(col(r, ["unmet_load_kW"])) : 0;
+        const curt = has("curtailed_pv_kW") ? z(col(r, ["curtailed_pv_kW"])) : 0;
+        const d = derive(pv, load, ch, dc, g, unmet, curt);
+        s.pv[i] = d.pv; s.load[i] = d.load; s.ch[i] = d.ch; s.dc[i] = d.dc;
+        s.soc[i] = soc; s.g[i] = d.g; s.on[i] = on; s.lf[i] = lf;
+        s.unmet[i] = d.unmet; s.curt[i] = d.curt;
+        s.g2b[i] = d.g2b; s.g2l[i] = d.g2l; s.p2b[i] = d.p2b; s.p2l[i] = d.p2l;
+        s.rPv[i] = d.rPv; s.rG[i] = d.rG; s.rL[i] = d.rL;
+        if (Math.abs(d.rPv) > SYS.consTol || Math.abs(d.rG) > SYS.consTol || Math.abs(d.rL) > SYS.consTol) {
+          fail.push({ name, i, rPv: d.rPv, rG: d.rG, rL: d.rL });
+        }
+        const litres = on ? (SYS.fuelA * SYS.ratedKw + SYS.fuelB * d.g) : 0;
+        s.fuel[i] = litres;
+        fF += litres; fB += d.g2b; fG += d.g; fC += d.ch; fD += d.dc; fU += d.curt; fR += on;
+        const start = on && !prevOn;
+        if (start) fS += 1;
+        s.isStart[i] = start ? 1 : 0;
+        if (start) s.hoursOff[i] = lastOn < 0 ? NaN : (i - lastOn - 1);
+        if (on) lastOn = i;
+        prevOn = on;
+        s.cumFuel[i] = fF; s.cumG2b[i] = fB; s.cumG[i] = fG; s.cumCh[i] = fC;
+        s.cumDc[i] = fD; s.cumCurt[i] = fU; s.cumRun[i] = fR; s.cumStarts[i] = fS;
+      }
+      ctrl[name] = s;
+    }
+    return { n: n0, times, names, ctrl, fail, hasSoc: has("soc_kWh"), hasUnmet: has("unmet_load_kW"), hasCurt: has("curtailed_pv_kW") };
+  }
+
+  /* ---------- schematic ---------- */
+  const FLOWS = [
+    { id: "p2l", a: "pv", b: "load", key: "p2l", src: "pv" },
+    { id: "p2b", a: "pv", b: "bat", key: "p2b", src: "pv" },
+    { id: "curt", a: "pv", b: "curt", key: "curt", src: "curt" },
+    { id: "g2l", a: "gen", b: "load", key: "g2l", src: "gen" },
+    { id: "g2b", a: "gen", b: "bat", key: "g2b", src: "bank" },
+    { id: "b2l", a: "bat", b: "load", key: "dc", src: "bat" }
+  ];
+
+  function nodeGeom() {
+    return {
+      pv:   { x: 88,  y: 58,  w: 108, h: 62 },
+      gen:  { x: 332, y: 58,  w: 108, h: 62 },
+      bat:  { x: 210, y: 175, w: 92,  h: 112 },
+      load: { x: 88,  y: 308, w: 108, h: 62 },
+      curt: { x: 332, y: 308, w: 108, h: 62 }
+    };
+  }
+  function edge(g, id, side) {
+    const n = g[id];
+    if (side === "b") return { x: n.x, y: n.y + n.h / 2 };
+    if (side === "t") return { x: n.x, y: n.y - n.h / 2 };
+    if (side === "l") return { x: n.x - n.w / 2, y: n.y };
+    if (side === "r") return { x: n.x + n.w / 2, y: n.y };
+    return { x: n.x, y: n.y };
+  }
+  function flowPath(g, id) {
+    const P = (a, b) => `M ${a.x} ${a.y} C ${a.x} ${(a.y + b.y) / 2}, ${b.x} ${(a.y + b.y) / 2}, ${b.x} ${b.y}`;
+    const Q = (a, c1, c2, b) => `M ${a.x} ${a.y} C ${c1.x} ${c1.y}, ${c2.x} ${c2.y}, ${b.x} ${b.y}`;
+    if (id === "p2l") return P(edge(g, "pv", "b"), edge(g, "load", "t"));
+    if (id === "p2b") return Q(edge(g, "pv", "r"), { x: 148, y: 88 }, { x: 148, y: 155 }, edge(g, "bat", "l"));
+    if (id === "curt") return Q(edge(g, "pv", "t"), { x: 90, y: 8 }, { x: 332, y: 8 }, edge(g, "curt", "t"));
+    if (id === "g2l") return Q(edge(g, "gen", "b"), { x: 318, y: 250 }, { x: 200, y: 300 }, edge(g, "load", "r"));
+    if (id === "g2b") return Q(edge(g, "gen", "l"), { x: 286, y: 92 }, { x: 274, y: 148 }, edge(g, "bat", "r"));
+    if (id === "b2l") return Q(edge(g, "bat", "b"), { x: 186, y: 248 }, { x: 140, y: 268 }, { x: 108, y: 277 });
+    return "";
+  }
+
+  function buildPanel(name) {
+    const pal = palette();
+    const g = nodeGeom();
+    const root = document.createElement("article");
+    root.className = "panel";
+    root.dataset.name = name;
+    const s = state.data.ctrl[name];
+    const phd = htmlEl("div", "phd");
+    const phdL = htmlEl("div");
+    const h2 = htmlEl("h2");
+    h2.textContent = SHORT[name] || name;
+    const lab = htmlEl("div", "lab");
+    lab.textContent = s.label || "";
+    phdL.appendChild(h2);
+    phdL.appendChild(lab);
+    const bankedBox = htmlEl("div", "banked");
+    const bankK = htmlEl("div", "k");
+    bankK.textContent = "Genset output banked";
+    const bankN = htmlEl("div", "n");
+    bankN.textContent = "-";
+    bankedBox.appendChild(bankK);
+    bankedBox.appendChild(bankN);
+    phd.appendChild(phdL);
+    phd.appendChild(bankedBox);
+    root.appendChild(phd);
+
+    const svg = el("svg", { class: "sch", viewBox: "0 0 420 360", xmlns: ns, "aria-hidden": "true" });
+    svg.appendChild(el("defs", null, [
+      el("filter", { id: "glow-" + name, x: "-50%", y: "-50%", width: "200%", height: "200%" }, [
+        el("feGaussianBlur", { stdDeviation: "2.4", result: "b" }),
+        el("feMerge", null, [el("feMergeNode", { in: "b" }), el("feMergeNode", { in: "SourceGraphic" })])
+      ])
+    ]));
+
+    const flowG = el("g", { class: "flows" });
+    const partG = el("g", { class: "parts" });
+    const flowEls = {};
+    for (const f of FLOWS) {
+      const dashed = f.id === "curt" ? "6 5" : null;
+      const pathEl = el("path", {
+        class: "f-" + f.id, d: flowPath(g, f.id), fill: "none",
+        stroke: pal[f.src], "stroke-linecap": "round", "stroke-width": 0,
+        "stroke-dasharray": dashed, opacity: 0.95,
+        filter: f.id === "g2b" ? "url(#glow-" + name + ")" : null
+      });
+      flowG.appendChild(pathEl);
+      flowEls[f.id] = pathEl;
+      partG.appendChild(el("g", { class: "p-" + f.id }));
+    }
+    svg.appendChild(flowG);
+    svg.appendChild(partG);
+
+    function card(id, title) {
+      const n = g[id];
+      const grp = el("g", { class: "node-" + id, transform: `translate(${n.x},${n.y})` });
+      grp.appendChild(el("rect", {
+        class: "body", x: -n.w / 2, y: -n.h / 2, width: n.w, height: n.h, rx: 10,
+        fill: pal.panel, stroke: pal.line, "stroke-width": 1.2
+      }));
+      grp.appendChild(el("text", {
+        class: "ttl", x: 0, y: -n.h / 2 + 14, "text-anchor": "middle",
+        fill: pal.muted, "font-size": 9, "font-family": "Segoe UI, system-ui, sans-serif",
+        "letter-spacing": "0.08em", text: title
+      }));
+      grp.appendChild(el("text", {
+        class: "val", x: 0, y: 6, "text-anchor": "middle",
+        fill: pal.text, "font-size": 15, "font-weight": 700,
+        "font-family": "Segoe UI, system-ui, sans-serif",
+        "font-variant-numeric": "tabular-nums", text: "—"
+      }));
+      grp.appendChild(el("text", {
+        class: "sub", x: 0, y: n.h / 2 - 10, "text-anchor": "middle",
+        fill: pal.muted, "font-size": 9.5,
+        "font-family": "Segoe UI, system-ui, sans-serif", text: ""
+      }));
+      return grp;
+    }
+
+    const pvN = card("pv", "PV ARRAY");
+    const genN = card("gen", "GENERATOR");
+    const loadN = card("load", "LOAD");
+    const curtN = card("curt", "CURTAILMENT");
+
+    const batN = el("g", { class: "node-bat", transform: `translate(${g.bat.x},${g.bat.y})` });
+    const bw = g.bat.w, bh = g.bat.h;
+    batN.appendChild(el("rect", { class: "body", x: -bw / 2, y: -bh / 2, width: bw, height: bh, rx: 10, fill: pal.panel, stroke: pal.line, "stroke-width": 1.2 }));
+    batN.appendChild(el("rect", { class: "well", x: -bw / 2 + 8, y: -bh / 2 + 22, width: bw - 16, height: bh - 36, rx: 5, fill: state.theme === "light" ? "#efe8da" : "#0e141c", stroke: pal.line }));
+    batN.appendChild(el("rect", { class: "fill", x: -bw / 2 + 8, y: 0, width: bw - 16, height: 0, rx: 4, fill: pal.bat, opacity: 0.85 }));
+    batN.appendChild(el("line", { class: "floor", x1: -bw / 2 + 8, x2: bw / 2 - 8, y1: 0, y2: 0, stroke: pal.wet, "stroke-width": 1.2, "stroke-dasharray": "3 2" }));
+    batN.appendChild(el("text", { class: "ttl", x: 0, y: -bh / 2 + 14, "text-anchor": "middle", fill: pal.muted, "font-size": 9, "letter-spacing": "0.08em", "font-family": "Segoe UI, system-ui, sans-serif", text: "BATTERY" }));
+    batN.appendChild(el("text", { class: "val", x: 0, y: 8, "text-anchor": "middle", fill: pal.text, "font-size": 13, "font-weight": 700, "font-family": "Segoe UI, system-ui, sans-serif", text: "—" }));
+    batN.appendChild(el("text", { class: "sub", x: 0, y: bh / 2 - 8, "text-anchor": "middle", fill: pal.muted, "font-size": 9, "font-family": "Segoe UI, system-ui, sans-serif", text: "min 13 kWh" }));
+
+    const barW = g.gen.w - 20, barX = -barW / 2, barY = g.gen.h / 2 - 16;
+    genN.appendChild(el("rect", { class: "lftrack", x: barX, y: barY, width: barW, height: 5, rx: 2, fill: pal.line }));
+    genN.appendChild(el("rect", { class: "lffill", x: barX, y: barY, width: 0, height: 5, rx: 2, fill: pal.gen }));
+    genN.appendChild(el("line", {
+      class: "lfmin",
+      x1: barX + SYS.minLoad * barW, x2: barX + SYS.minLoad * barW,
+      y1: barY - 2, y2: barY + 7, stroke: pal.wet, "stroke-width": 1.2
+    }));
+
+    svg.appendChild(pvN);
+    svg.appendChild(genN);
+    svg.appendChild(batN);
+    svg.appendChild(loadN);
+    svg.appendChild(curtN);
+
+    const bankLabEl = el("text", {
+      class: "bank-lab", x: 268, y: 128, fill: pal.bank, "font-size": 10,
+      "font-weight": 700, "font-family": "Segoe UI, system-ui, sans-serif", text: ""
+    });
+    svg.appendChild(bankLabEl);
+
+    root.appendChild(svg);
+    const counters = htmlEl("div", "counters");
+    function metric(label, cls) {
+      const d = htmlEl("div");
+      const sp = htmlEl("span");
+      sp.textContent = label;
+      const b = htmlEl("b", cls);
+      b.textContent = "—";
+      d.appendChild(sp);
+      d.appendChild(b);
+      counters.appendChild(d);
+      return b;
+    }
+    const cFuel = metric("Fuel consumed", "c-fuel");
+    const cSplit = metric("Banked / served", "c-split");
+    const cThru = metric("Battery throughput", "c-thru");
+    const cCurt = metric("PV curtailed", "c-curt");
+    const cRun = metric("Run hours / starts", "c-run");
+    const cCyc = metric("Equiv. cycles", "c-cyc");
+    root.appendChild(counters);
+    const cons = htmlEl("div", "cons");
+    const tick = htmlEl("span", "tick");
+    tick.textContent = "CONSERVATION";
+    const res = htmlEl("span", "res");
+    res.textContent = "—";
+    cons.appendChild(tick);
+    cons.appendChild(res);
+    root.appendChild(cons);
+
+    root._svg = svg;
+    root._g = g;
+    root._parts = {};
+    for (const f of FLOWS) root._parts[f.id] = [];
+    root._ui = {
+      bankN: bankN,
+      bankLab: bankLabEl,
+      cFuel: cFuel, cSplit: cSplit, cThru: cThru, cCurt: cCurt, cRun: cRun, cCyc: cCyc,
+      tick: tick, res: res,
+      flows: flowEls
+    };
+    return root;
+  }
+
+  function colorFor(src, pal) { return pal[src]; }
+
+  function updatePanel(root, hour) {
+    const name = root.dataset.name;
+    const s = state.data.ctrl[name];
+    const pal = palette();
+    const svg = root._svg;
+    const ui = root._ui || {};
+    if (!svg) return;
+    const i = hour;
+    const d = {
+      p2l: s.p2l[i], p2b: s.p2b[i], curt: s.curt[i],
+      g2l: s.g2l[i], g2b: s.g2b[i], dc: s.dc[i],
+      pv: s.pv[i], g: s.g[i], load: s.load[i], ch: s.ch[i],
+      soc: s.soc[i], on: s.on[i], lf: s.lf[i], unmet: s.unmet[i]
+    };
+
+    for (const f of FLOWS) {
+      const p = (ui.flows && ui.flows[f.id]) || svg.querySelector(".f-" + f.id);
+      const kw = d[f.key];
+      const w = Math.max(0, kw) * SYS.pxPerKw;
+      if (!p) continue;
+      p.setAttribute("stroke-width", w);
+      p.setAttribute("stroke", colorFor(f.src, pal));
+      p.setAttribute("opacity", w > 0 ? (f.id === "curt" ? 0.7 : 0.95) : 0);
+      if (f.id === "g2b") {
+        if (w > 0) p.setAttribute("filter", "url(#glow-" + name + ")");
+        else p.removeAttribute("filter");
+      }
+      syncParticles(root, f.id, p, kw, pal[f.src]);
+    }
+
+    const bankLab = ui.bankLab || svg.querySelector(".bank-lab");
+    if (bankLab) {
+      bankLab.textContent = d.g2b > 0.05 ? fmtK(d.g2b) + " kW banked" : "";
+      bankLab.setAttribute("fill", pal.bank);
+    }
+
+    setNode(svg, ".node-pv", pal.pv, fmtK(d.pv) + " kW", d.pv > 0.5 ? "available" : "night", pal);
+    const wet = d.on && isFinite(d.lf) && d.lf < SYS.minLoad - 1e-9;
+    const genCol = !d.on ? pal.off : (wet ? pal.wet : pal.gen);
+    const genBody = svg.querySelector(".node-gen .body");
+    if (genBody) {
+      genBody.setAttribute("stroke", genCol);
+      genBody.setAttribute("stroke-width", d.on ? 2 : 1.2);
+    }
+    setText(svg, ".node-gen .val", d.on ? fmtK(d.g) + " kW" : "OFF", pal.text);
+    const lfPct = d.on && isFinite(d.lf) ? (d.lf * 100) : 0;
+    setText(svg, ".node-gen .sub",
+      d.on ? ((wet ? "WET STACK  " : "") + fmt(lfPct, 0) + "% load  ·  30% mark") : "idle",
+      wet ? pal.wet : pal.muted);
+    const lffill = svg.querySelector(".node-gen .lffill");
+    const lftrack = svg.querySelector(".node-gen .lftrack");
+    if (lffill && lftrack) {
+      const bw = +lftrack.getAttribute("width") || 0;
+      lffill.setAttribute("width", d.on ? String(Math.max(0, Math.min(1, d.lf)) * bw) : "0");
+      lffill.setAttribute("fill", genCol);
+    }
+
+    // battery
+    const well = svg.querySelector(".node-bat .well");
+    const fill = svg.querySelector(".node-bat .fill");
+    const floor = svg.querySelector(".node-bat .floor");
+    const soc = d.soc;
+    if (well && fill && floor) {
+      const wy = +well.getAttribute("y"), wh = +well.getAttribute("height");
+      const frac = isFinite(soc) ? Math.max(0, Math.min(1, soc / SYS.socMax)) : 0;
+      const fh = wh * frac;
+      fill.setAttribute("y", wy + wh - fh);
+      fill.setAttribute("height", fh);
+      fill.setAttribute("fill", pal.bat);
+      const fy = wy + wh - wh * (SYS.socMin / SYS.socMax);
+      floor.setAttribute("y1", fy); floor.setAttribute("y2", fy);
+    }
+    setText(svg, ".node-bat .val", isFinite(soc) ? fmt(soc, 1) + " kWh" : "—", pal.text);
+    setText(svg, ".node-bat .sub", "floor " + SYS.socMin + " · " + SYS.socMax + " kWh", pal.muted);
+    const batBody = svg.querySelector(".node-bat .body");
+    if (batBody) batBody.setAttribute("stroke", pal.line);
+
+    const loadBody = svg.querySelector(".node-load .body");
+    const un = d.unmet > 1e-6;
+    if (loadBody) {
+      loadBody.setAttribute("stroke", un ? pal.bad : pal.load);
+      loadBody.setAttribute("stroke-width", un ? 2.2 : 1.2);
+    }
+    setText(svg, ".node-load .val", fmtK(d.load) + " kW", pal.text);
+    setText(svg, ".node-load .sub", un ? ("UNSERVED  " + fmtK(d.unmet) + " kW") : "demand", un ? pal.bad : pal.muted);
+
+    setNode(svg, ".node-curt", pal.curt, fmtK(d.curt) + " kW", "wasted PV", pal);
+    const curtBody = svg.querySelector(".node-curt .body");
+    if (curtBody) curtBody.setAttribute("stroke-dasharray", "4 3");
+
+    const gTot = s.cumG[i];
+    const bankedPct = gTot > 1e-9 ? 100 * s.cumG2b[i] / gTot : 0;
+    txt(ui.bankN, fmt(bankedPct, 1) + "%");
+    const thru = 0.5 * (s.cumCh[i] + s.cumDc[i]);
+    const cyc = s.cumDc[i] / (SYS.batKwh * 0.90);
+    txt(ui.cFuel, fmt(s.cumFuel[i], 1) + " L");
+    txt(ui.cSplit, fmt(s.cumG2b[i], 1) + " / " + fmt(gTot - s.cumG2b[i], 1) + " kWh");
+    txt(ui.cThru, fmt(thru, 1) + " kWh");
+    txt(ui.cCurt, fmt(s.cumCurt[i], 1) + " kWh");
+    txt(ui.cRun, s.cumRun[i] + " h  ·  " + s.cumStarts[i]);
+    txt(ui.cCyc, fmt(cyc, 2));
+
+    const ok = Math.abs(s.rPv[i]) < SYS.consTol && Math.abs(s.rG[i]) < SYS.consTol && Math.abs(s.rL[i]) < SYS.consTol;
+    if (ui.tick) {
+      ui.tick.className = "tick " + (ok ? "ok" : "bad");
+      ui.tick.textContent = ok ? "✓  CONSERVED" : "✗  RESIDUAL";
+    }
+    txt(ui.res,
+      "PV " + s.rPv[i].toExponential(1)
+      + "   G " + s.rG[i].toExponential(1)
+      + "   L " + s.rL[i].toExponential(1));
+  }
+
+  function setNode(svg, sel, stroke, val, sub, pal) {
+    const n = svg.querySelector(sel);
+    if (!n) return;
+    const body = n.querySelector(".body");
+    if (body) body.setAttribute("stroke", stroke);
+    setText(n, ".val", val, pal.text);
+    setText(n, ".sub", sub, pal.muted);
+  }
+  function setText(root, sel, t, fill) {
+    const n = typeof root.querySelector === "function" ? root.querySelector(sel) : root;
+    if (!n) return;
+    n.textContent = t;
+    if (fill) n.setAttribute("fill", fill);
+  }
+
+  function syncParticles(root, id, path, kw, color) {
+    if (!path || !path.parentNode || !path.parentNode.parentNode) return;
+    const g = path.parentNode.parentNode.querySelector(".p-" + id);
+    if (!g) return;
+    const nWant = kw > 0.4 ? Math.min(14, Math.max(2, Math.round(kw / 3.5))) : 0;
+    let arr = root._parts[id];
+    while (arr.length < nWant) {
+      const c = el("circle", { r: id === "g2b" ? 2.6 : 2, fill: color });
+      g.appendChild(c);
+      arr.push({ el: c, t: Math.random() });
+    }
+    while (arr.length > nWant) {
+      const p = arr.pop();
+      p.el.remove();
+    }
+    for (const p of arr) p.el.setAttribute("fill", color);
+    g.style.display = nWant ? "" : "none";
+    root._parts[id]._kw = kw;
+    root._parts[id]._path = path;
+  }
+
+  function animateParticles(dt) {
+    const panels = $$("#stage .panel");
+    for (const root of panels) {
+      for (const f of FLOWS) {
+        const arr = root._parts[f.id];
+        if (!arr || !arr.length) continue;
+        const path = arr._path;
+        const kw = arr._kw || 0;
+        if (!path || kw <= 0) continue;
+        let len;
+        try { len = path.getTotalLength(); } catch (e) { continue; }
+        if (!len) continue;
+        const spd = (0.12 + kw * 0.012) * (dt / 1000); // fraction of path / s
+        for (const p of arr) {
+          p.t += spd;
+          if (p.t > 1) p.t -= Math.floor(p.t);
+          const pt = path.getPointAtLength(p.t * len);
+          p.el.setAttribute("cx", pt.x);
+          p.el.setAttribute("cy", pt.y);
+        }
+      }
+    }
+  }
+
+  /* ---------- timeline ---------- */
+  function layoutTl() {
+    const box = $("#tlbox");
+    const w = box.clientWidth, h = box.clientHeight;
+    const dpr = window.devicePixelRatio || 1;
+    for (const id of ["tl-static", "tl-over"]) {
+      const c = $("#" + id);
+      c.width = Math.max(1, w * dpr);
+      c.height = Math.max(1, h * dpr);
+      c.style.width = w + "px";
+      c.style.height = h + "px";
+      c.getContext("2d").setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+    return { w, h };
+  }
+
+  function xAt(i, n, w) { return n <= 1 ? 0 : (i / (n - 1)) * w; }
+
+  function drawStatic() {
+    const data = state.data;
+    if (!data) return;
+    const { w, h } = layoutTl();
+    const ctx = $("#tl-static").getContext("2d");
+    const pal = palette();
+    ctx.clearRect(0, 0, w, h);
+    const laneH = 7, laneGap = 3;
+    const lanesTop = h - data.names.length * (laneH + laneGap) - 8;
+    const plotH = lanesTop - 18;
+    const n = data.n;
+
+    // y max from visible controller stack + load
+    let ymax = 1;
+    for (const name of data.names) {
+      const s = data.ctrl[name];
+      for (let i = 0; i < n; i++) {
+        ymax = Math.max(ymax, s.load[i], s.p2l[i] + s.g2l[i] + s.dc[i], s.pv[i]);
+      }
+    }
+    ymax *= 1.08;
+    const yOf = (v) => 14 + (1 - v / ymax) * (plotH - 4);
+
+    // day/night from PV of first series
+    const pv = data.ctrl[data.names[0]].pv;
+    ctx.fillStyle = pal.bg;
+    ctx.fillRect(0, 0, w, h);
+    let i = 0;
+    while (i < n) {
+      const night = pv[i] < 0.5;
+      let j = i + 1;
+      while (j < n && (pv[j] < 0.5) === night) j++;
+      ctx.fillStyle = night ? pal.night : pal.day;
+      ctx.fillRect(xAt(i, n, w), 0, Math.max(1, xAt(Math.min(n - 1, j), n, w) - xAt(i, n, w)), lanesTop);
+      i = j;
+    }
+
+    // stacked area of the first visible controller (supply to load)
+    const focus = state.visible[0] || data.names[0];
+    const s = data.ctrl[focus];
+    function area(bot, top, color) {
+      ctx.beginPath();
+      ctx.moveTo(xAt(0, n, w), yOf(bot[0]));
+      for (let i = 1; i < n; i++) ctx.lineTo(xAt(i, n, w), yOf(bot[i]));
+      for (let i = n - 1; i >= 0; i--) ctx.lineTo(xAt(i, n, w), yOf(top[i]));
+      ctx.closePath();
+      ctx.fillStyle = color;
+      ctx.fill();
+    }
+    const z0 = new Float64Array(n);
+    const a1 = new Float64Array(n), a2 = new Float64Array(n), a3 = new Float64Array(n);
+    for (let i = 0; i < n; i++) {
+      a1[i] = s.p2l[i];
+      a2[i] = s.p2l[i] + s.g2l[i];
+      a3[i] = s.p2l[i] + s.g2l[i] + s.dc[i];
+    }
+    area(z0, a1, pal.pv + "cc");
+    area(a1, a2, pal.gen + "cc");
+    area(a2, a3, pal.bat + "cc");
+    ctx.beginPath();
+    for (let i = 0; i < n; i++) {
+      const x = xAt(i, n, w), y = yOf(s.load[i]);
+      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    }
+    ctx.strokeStyle = pal.load;
+    ctx.lineWidth = 1.4;
+    ctx.stroke();
+
+    // day labels
+    ctx.fillStyle = pal.muted;
+    ctx.font = "10px Segoe UI, system-ui, sans-serif";
+    ctx.textBaseline = "top";
+    let lastDay = -1;
+    for (let i = 0; i < n; i++) {
+      const d = data.times[i];
+      if (d.getHours() === 0 && d.getDate() !== lastDay) {
+        lastDay = d.getDate();
+        ctx.fillText(["Sun","Mon","Tue","Wed","Thu","Fri","Sat"][d.getDay()] + " " + d.getDate(), xAt(i, n, w) + 3, 2);
+      }
+    }
+
+    // genset run-block lanes
+    data.names.forEach((name, li) => {
+      const y = lanesTop + li * (laneH + laneGap);
+      const on = data.ctrl[name].on;
+      const vis = state.visible.indexOf(name) >= 0;
+      ctx.globalAlpha = vis ? 1 : 0.35;
+      ctx.fillStyle = CHIP_C[name] || pal.muted;
+      let k = 0;
+      while (k < n) {
+        if (!on[k]) { k++; continue; }
+        let j = k;
+        while (j < n && on[j]) j++;
+        const x0 = xAt(k, n, w), x1 = xAt(Math.min(n - 1, j), n, w);
+        ctx.fillRect(x0, y, Math.max(1.5, x1 - x0), laneH);
+        k = j;
+      }
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = pal.faint;
+      ctx.font = "9px Segoe UI, system-ui, sans-serif";
+      ctx.textBaseline = "middle";
+      ctx.fillText(SHORT[name] || name, 4, y + laneH / 2);
+    });
+  }
+
+  function drawOver() {
+    const data = state.data;
+    if (!data) return;
+    const box = $("#tlbox");
+    const w = box.clientWidth, h = box.clientHeight;
+    const ctx = $("#tl-over").getContext("2d");
+    ctx.clearRect(0, 0, w, h);
+    const pal = palette();
+    const x = xAt(state.hour, data.n, w);
+    ctx.strokeStyle = pal.text;
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.moveTo(x, 0); ctx.lineTo(x, h);
+    ctx.stroke();
+    ctx.fillStyle = pal.text;
+    ctx.beginPath();
+    ctx.moveTo(x - 5, 0); ctx.lineTo(x + 5, 0); ctx.lineTo(x, 7);
+    ctx.closePath(); ctx.fill();
+  }
+
+  /* ---------- view ---------- */
+  function visibleNames() {
+    const data = state.data;
+    if (!data) return [];
+    if (state.mode === 4) return data.names.slice(0, 4);
+    if (state.mode === 1) return [state.visible[0] || data.names[0]];
+    const v = state.visible.filter(n => data.ctrl[n]);
+    if (v.length >= 2) return v.slice(0, 2);
+    const extra = data.names.filter(n => v.indexOf(n) < 0);
+    return v.concat(extra).slice(0, 2);
+  }
+
+  function rebuildStage() {
+    const stage = $("#stage");
+    if (!stage) return;
+    stage.innerHTML = "";
+    const vis = visibleNames();
+    document.documentElement.style.setProperty("--cols", String(vis.length || 1));
+    for (const name of vis) {
+      try { stage.appendChild(buildPanel(name)); }
+      catch (e) {
+        const err = htmlEl("article", "panel");
+        err.textContent = (SHORT[name] || name) + ": " + (e.message || e);
+        stage.appendChild(err);
+      }
+    }
+    try { refreshHour(); } catch (e) { console.error(e); }
+    drawStatic();
+    drawOver();
+  }
+
+  function refreshHour() {
+    if (!state.data) return;
+    const i = state.hour;
+    $$("#stage .panel").forEach(p => updatePanel(p, i));
+    $("#clock").innerHTML = stamp(state.data.times[i])
+      + "  <small>hour " + (i + 1) + " / " + state.data.n + "</small>";
+    drawOver();
+    renderAnn();
+  }
+
+  function renderAnn() {
+    const box = $("#ann");
+    box.innerHTML = "";
+    const vis = visibleNames();
+    let any = false;
+    for (const name of vis) {
+      const s = state.data.ctrl[name];
+      const i = state.hour;
+      if (!s.isStart[i]) continue;
+      any = true;
+      const off = s.hoursOff[i];
+      const soc = s.soc[i];
+      const head = isFinite(soc) ? SYS.socMax - soc : NaN;
+      const above = isFinite(soc) ? soc - SYS.socMin : NaN;
+      const d = document.createElement("div");
+      d.className = "ann";
+      d.innerHTML = `<h3>Generator start — ${SHORT[name] || name}</h3>
+        <div class="row">
+          <span>SOC <b>${fmt(soc, 1)} kWh</b></span>
+          <span>Headroom to 130 kWh <b>${fmt(head, 1)} kWh</b></span>
+          <span>Above floor <b>${fmt(above, 1)} kWh</b></span>
+          <span>Load <b>${fmtK(s.load[i])} kW</b></span>
+          <span>PV <b>${fmtK(s.pv[i])} kW</b></span>
+          <span>Hours since last stop <b>${isFinite(off) ? fmt(off, 0) : "start of record"}</b></span>
+          <span>Genset <b>${fmtK(s.g[i])} kW</b></span>
+          <span>of which to battery <b>${fmtK(s.g2b[i])} kW</b></span>
+        </div>
+        <div class="note">Observable conditions at the start hour only — no inferred rationale. Planned commitment is not in this file.</div>`;
+      box.appendChild(d);
+    }
+    box.classList.toggle("show", any);
+  }
+
+  function setHour(h) {
+    if (!state.data) return;
+    state.hour = Math.max(0, Math.min(state.data.n - 1, h | 0));
+    refreshHour();
+  }
+
+  function contrastHour() {
+    const d = state.data;
+    if (!d || !d.ctrl.heuristic || !d.ctrl.roll24) return 0;
+    const H = d.ctrl.heuristic, R = d.ctrl.roll24;
+    let best = -1, score = -1e9;
+    for (let i = 0; i < d.n; i++) {
+      if (H.g2b[i] > 1 && R.on[i] && R.g2b[i] < 1) {
+        const sc = H.g2b[i] + R.g2l[i];
+        if (sc > score) { score = sc; best = i; }
+      }
+    }
+    if (best >= 0) return best;
+    for (let i = 0; i < d.n; i++) {
+      const sc = H.g2b[i] - R.g2b[i];
+      if (sc > score) { score = sc; best = i; }
+    }
+    return Math.max(0, best);
+  }
+
+  /* ---------- chips / chrome ---------- */
+  function renderChips() {
+    const box = $("#ctrl-chips");
+    box.innerHTML = "";
+    if (!state.data) return;
+    for (const name of state.data.names) {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "chip" + (visibleNames().indexOf(name) >= 0 ? " on" : "");
+      b.style.setProperty("--c", CHIP_C[name] || css("--load"));
+      b.textContent = SHORT[name] || name;
+      b.addEventListener("click", () => {
+        if (state.mode === 4) return;
+        if (state.mode === 1) state.visible = [name];
+        else {
+          const v = visibleNames().slice();
+          const ix = v.indexOf(name);
+          if (ix >= 0) {
+            if (v.length === 1) return;
+            v.splice(ix, 1);
+          } else {
+            if (v.length >= 2) v.shift();
+            v.push(name);
+          }
+          state.visible = v;
+        }
+        rebuildStage();
+        renderChips();
+      });
+      box.appendChild(b);
+    }
+  }
+
+  function renderScale() {
+    const box = $("#scale");
+    box.innerHTML = "";
+    for (const kw of [5, 20, 40]) {
+      const s = document.createElement("span");
+      const i = document.createElement("i");
+      i.style.borderTopWidth = Math.max(1, kw * SYS.pxPerKw) + "px";
+      i.style.width = "28px";
+      s.appendChild(i);
+      s.appendChild(document.createTextNode(kw + " kW"));
+      box.appendChild(s);
+    }
+  }
+
+  function fillRangeSelects() {
+    const d = state.data;
+    const a = $("#ex-from"), b = $("#ex-to");
+    a.innerHTML = ""; b.innerHTML = "";
+    for (let i = 0; i < d.n; i++) {
+      const o1 = document.createElement("option");
+      o1.value = i; o1.textContent = stamp(d.times[i]);
+      a.appendChild(o1);
+      const o2 = o1.cloneNode(true);
+      b.appendChild(o2);
+    }
+    a.value = 0;
+    b.value = String(d.n - 1);
+  }
+
+  function showBanner(data) {
+    const b = $("#banner");
+    if (data.fail.length) {
+      const f = data.fail[0];
+      b.className = "show";
+      b.textContent = "Conservation residual exceeds 1e-6 on " + data.fail.length
+        + " frame(s). First: " + (SHORT[f.name] || f.name) + " hour " + f.i
+        + "  PV " + f.rPv + "  G " + f.rG + "  L " + f.rL
+        + ". The banked split is not being estimated — check the stored columns.";
+    } else {
+      b.className = "ok";
+      b.textContent = "Conservation residuals < 1e-6 on every hour of every loaded controller.";
+    }
+  }
+
+  function loadFromCSV(text, sourceName) {
+    const parsed = parseCSV(text);
+    const data = indexRows(parsed.rows, parsed.header);
+    state.data = data;
+    state.sourceName = sourceName;
+    state.playing = false;
+    $("#btn-play").textContent = "Play";
+    if (data.ctrl.heuristic && data.ctrl.roll24) {
+      state.visible = ["heuristic", "roll24"];
+      state.mode = data.names.length >= 2 ? 2 : 1;
+      state.hour = contrastHour();
+    } else {
+      state.visible = data.names.slice(0, 2);
+      state.mode = Math.min(2, data.names.length);
+      state.hour = 0;
+    }
+    if (/4/.test(location.hash + location.search)) {
+      state.mode = 4;
+      state.visible = data.names.slice();
+    }
+    $$("#modes button").forEach(b => b.classList.toggle("on", +b.dataset.mode === state.mode));
+    renderChips();
+    try { rebuildStage(); }
+    catch (e) {
+      $("#banner").className = "show";
+      $("#banner").textContent = String(e.message || e);
+    }
+    fillRangeSelects();
+    showBanner(data);
+    const end = data.n - 1;
+    const bits = data.names.map(n => {
+      const s = data.ctrl[n];
+      const pct = s.cumG[end] > 0 ? 100 * s.cumG2b[end] / s.cumG[end] : 0;
+      return (SHORT[n] || n) + " " + pct.toFixed(1) + "%";
+    });
+    $("#foot").textContent = sourceName + "  ·  " + data.n + " hours  ·  "
+      + data.names.length + " controllers  ·  end-of-period banked: " + bits.join("  ·  ")
+      + "  ·  fuel F = " + SYS.fuelA + "·P_rated + " + SYS.fuelB + "·P L/h on stored genset_on";
+  }
+
+  /* ---------- export ---------- */
+  function svgToImg(svgEl) {
+    const clone = svgEl.cloneNode(true);
+    clone.setAttribute("xmlns", ns);
+    const xml = new XMLSerializer().serializeToString(clone);
+    const blob = new Blob([xml], { type: "image/svg+xml;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => { URL.revokeObjectURL(url); resolve(img); };
+      img.onerror = (e) => { URL.revokeObjectURL(url); reject(e); };
+      img.src = url;
+    });
+  }
+
+  async function renderFrameCanvas(scale) {
+    const panels = $$("#stage .panel");
+    const pal = palette();
+    const pad = 28;
+    const headerH = 72;
+    const footerH = 64;
+    const pw = 520, ph = 560;
+    const cols = panels.length;
+    const W = pad * 2 + cols * pw + (cols - 1) * 16;
+    const H = pad + headerH + ph + footerH;
+    const cv = document.createElement("canvas");
+    cv.width = Math.round(W * scale);
+    cv.height = Math.round(H * scale);
+    const ctx = cv.getContext("2d");
+    ctx.scale(scale, scale);
+    ctx.fillStyle = pal.bg;
+    ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = pal.text;
+    ctx.font = "650 18px Segoe UI, system-ui, sans-serif";
+    ctx.fillText("Dispatch  ·  generator output banked vs served directly", pad, 32);
+    ctx.font = "12px Segoe UI, system-ui, sans-serif";
+    ctx.fillStyle = pal.muted;
+    ctx.fillText(stamp(state.data.times[state.hour]) + "   ·   " + state.sourceName, pad, 52);
+
+    for (let i = 0; i < panels.length; i++) {
+      const x = pad + i * (pw + 16);
+      const y = headerH;
+      ctx.fillStyle = pal.panel;
+      roundRect(ctx, x, y, pw, ph, 12);
+      ctx.fill();
+      ctx.strokeStyle = pal.line;
+      ctx.stroke();
+      const name = panels[i].dataset.name;
+      const s = state.data.ctrl[name];
+      const h = state.hour;
+      const pct = s.cumG[h] > 0 ? 100 * s.cumG2b[h] / s.cumG[h] : 0;
+      ctx.fillStyle = pal.text;
+      ctx.font = "650 15px Segoe UI, system-ui, sans-serif";
+      ctx.fillText(SHORT[name] || name, x + 16, y + 24);
+      ctx.fillStyle = pal.bank;
+      ctx.font = "700 22px Segoe UI, system-ui, sans-serif";
+      ctx.textAlign = "right";
+      ctx.fillText(fmt(pct, 1) + "% banked", x + pw - 16, y + 26);
+      ctx.textAlign = "left";
+      const img = await svgToImg(panels[i]._svg);
+      ctx.drawImage(img, x + 10, y + 36, pw - 20, 360);
+      ctx.fillStyle = pal.muted;
+      ctx.font = "11px Segoe UI, system-ui, sans-serif";
+      const thru = 0.5 * (s.cumCh[h] + s.cumDc[h]);
+      const line = "Fuel " + fmt(s.cumFuel[h], 1) + " L    "
+        + fmt(s.cumG2b[h], 1) + " kWh banked / " + fmt(s.cumG[h] - s.cumG2b[h], 1) + " served    "
+        + "cycles " + fmt(s.cumDc[h] / (SYS.batKwh * 0.9), 2);
+      ctx.fillText(line, x + 16, y + ph - 28);
+      const ok = Math.abs(s.rPv[h]) < SYS.consTol && Math.abs(s.rG[h]) < SYS.consTol && Math.abs(s.rL[h]) < SYS.consTol;
+      ctx.fillStyle = ok ? pal.ok : pal.bad;
+      ctx.fillText(ok ? "✓ conserved" : "✗ residual", x + 16, y + ph - 12);
+    }
+    ctx.fillStyle = pal.faint;
+    ctx.font = "10px Segoe UI, system-ui, sans-serif";
+    ctx.fillText("Link width ∝ kW (fixed scale). Banked = min(genset_kW, battery_charge_kW). Values from stored dispatch.", pad, H - 18);
+    return cv;
+  }
+  function roundRect(ctx, x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+  }
+
+  async function exportPNG() {
+    if (!state.data) return;
+    const cv = await renderFrameCanvas(3);
+    const a = document.createElement("a");
+    a.download = "dispatch_" + fileStamp(state.data.times[state.hour]) + ".png";
+    a.href = cv.toDataURL("image/png");
+    a.click();
+  }
+  function fileStamp(d) {
+    return d.getFullYear() + pad(d.getMonth() + 1) + pad(d.getDate()) + "_" + pad(d.getHours()) + "00";
+  }
+
+  function crc32(buf) {
+    let c = ~0;
+    for (let i = 0; i < buf.length; i++) {
+      c ^= buf[i];
+      for (let k = 0; k < 8; k++) c = (c >>> 1) ^ (0xedb88320 & -(c & 1));
+    }
+    return ~c >>> 0;
+  }
+  function u16(n) { return new Uint8Array([n & 255, (n >>> 8) & 255]); }
+  function u32(n) { return new Uint8Array([n & 255, (n >>> 8) & 255, (n >>> 16) & 255, (n >>> 24) & 255]); }
+  function concat(arrs) {
+    let n = 0; for (const a of arrs) n += a.length;
+    const o = new Uint8Array(n); let p = 0;
+    for (const a of arrs) { o.set(a, p); p += a.length; }
+    return o;
+  }
+  function strBytes(s) { return new TextEncoder().encode(s); }
+  function zipStore(files) {
+    const locals = [], centrals = [];
+    let offset = 0;
+    for (const f of files) {
+      const name = strBytes(f.name);
+      const data = f.data;
+      const crc = crc32(data);
+      const local = concat([
+        u32(0x04034b50), u16(20), u16(0), u16(0), u16(0), u16(0),
+        u32(crc), u32(data.length), u32(data.length), u16(name.length), u16(0),
+        name, data
+      ]);
+      locals.push(local);
+      const central = concat([
+        u32(0x02014b50), u16(20), u16(20), u16(0), u16(0), u16(0), u16(0),
+        u32(crc), u32(data.length), u32(data.length), u16(name.length), u16(0),
+        u16(0), u16(0), u16(0), u32(0), u32(offset), name
+      ]);
+      centrals.push(central);
+      offset += local.length;
+    }
+    const cd = concat(centrals);
+    const end = concat([
+      u32(0x06054b50), u16(0), u16(0), u16(files.length), u16(files.length),
+      u32(cd.length), u32(offset), u16(0)
+    ]);
+    return concat(locals.concat([cd, end]));
+  }
+  function dataURLToBytes(url) {
+    const b64 = url.split(",")[1];
+    const bin = atob(b64);
+    const out = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+    return out;
+  }
+
+  async function exportRange() {
+    const a = +$("#ex-from").value, b = +$("#ex-to").value;
+    const lo = Math.min(a, b), hi = Math.max(a, b);
+    const prog = $("#ex-prog");
+    const files = [];
+    const saved = state.hour;
+    for (let i = lo; i <= hi; i++) {
+      setHour(i);
+      await new Promise(r => requestAnimationFrame(r));
+      const cv = await renderFrameCanvas(2);
+      const bytes = dataURLToBytes(cv.toDataURL("image/png"));
+      files.push({ name: "frame_" + pad(i - lo + 1) + "_" + fileStamp(state.data.times[i]) + ".png", data: bytes });
+      prog.textContent = "Rendered " + (i - lo + 1) + " / " + (hi - lo + 1);
+    }
+    setHour(saved);
+    const zip = zipStore(files);
+    const blob = new Blob([zip], { type: "application/zip" });
+    const ael = document.createElement("a");
+    ael.download = "dispatch_frames_" + fileStamp(state.data.times[lo]) + "_" + fileStamp(state.data.times[hi]) + ".zip";
+    ael.href = URL.createObjectURL(blob);
+    ael.click();
+    prog.textContent = "Done — " + files.length + " frames.";
+  }
+
+  /* ---------- transport ---------- */
+  let acc = 0, lastT = 0;
+  const MS_PER_HOUR = 900;
+
+  function loop(t) {
+    if (!lastT) lastT = t;
+    const dt = Math.min(64, t - lastT);
+    lastT = t;
+    if (state.playing && state.data) {
+      acc += dt * state.speed;
+      while (acc >= MS_PER_HOUR) {
+        acc -= MS_PER_HOUR;
+        if (state.hour >= state.data.n - 1) {
+          state.playing = false;
+          $("#btn-play").textContent = "Play";
+          break;
+        }
+        setHour(state.hour + 1);
+      }
+    }
+    animateParticles(dt);
+    requestAnimationFrame(loop);
+  }
+  requestAnimationFrame(loop);
+
+  function bindTl() {
+    const over = $("#tl-over");
+    let drag = false;
+    function at(ev) {
+      const r = over.getBoundingClientRect();
+      const x = Math.max(0, Math.min(1, (ev.clientX - r.left) / r.width));
+      return Math.round(x * (state.data.n - 1));
+    }
+    over.addEventListener("pointerdown", ev => { if (!state.data) return; drag = true; over.setPointerCapture(ev.pointerId); setHour(at(ev)); });
+    over.addEventListener("pointermove", ev => { if (drag) setHour(at(ev)); });
+    over.addEventListener("pointerup", () => { drag = false; });
+  }
+
+  /* ---------- events ---------- */
+  $("#btn-play").addEventListener("click", () => {
+    if (!state.data) return;
+    if (state.hour >= state.data.n - 1) setHour(0);
+    state.playing = !state.playing;
+    $("#btn-play").textContent = state.playing ? "Pause" : "Play";
+    acc = 0;
+  });
+  $("#btn-back").addEventListener("click", () => setHour(state.hour - 1));
+  $("#btn-fwd").addEventListener("click", () => setHour(state.hour + 1));
+  $("#speeds").addEventListener("click", ev => {
+    const b = ev.target.closest("button");
+    if (!b) return;
+    state.speed = +b.dataset.sp;
+    $$("#speeds button").forEach(x => x.classList.toggle("on", x === b));
+  });
+  $("#modes").addEventListener("click", ev => {
+    const b = ev.target.closest("button");
+    if (!b || !state.data) return;
+    state.mode = +b.dataset.mode;
+    $$("#modes button").forEach(x => x.classList.toggle("on", x === b));
+    if (state.mode === 4) state.visible = state.data.names.slice();
+    rebuildStage();
+    renderChips();
+  });
+  $("#btn-contrast").addEventListener("click", () => setHour(contrastHour()));
+  $("#btn-theme").addEventListener("click", () => {
+    state.theme = state.theme === "dark" ? "light" : "dark";
+    if (state.theme === "light") document.documentElement.setAttribute("data-theme", "light");
+    else document.documentElement.removeAttribute("data-theme");
+    $("#btn-theme").textContent = state.theme === "dark" ? "Light" : "Dark";
+    rebuildStage();
+  });
+  $("#btn-load").addEventListener("click", () => $("#file").click());
+  $("#file").addEventListener("change", ev => {
+    const f = ev.target.files[0];
+    if (!f) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try { loadFromCSV(String(reader.result), f.name); }
+      catch (e) { $("#banner").className = "show"; $("#banner").textContent = String(e.message || e); }
+    };
+    reader.readAsText(f);
+  });
+  $("#btn-png").addEventListener("click", () => exportPNG().catch(e => alert(e)));
+  $("#btn-range").addEventListener("click", () => { if (state.data) { $("#ex-prog").textContent = ""; $("#modal").classList.add("show"); } });
+  $("#ex-cancel").addEventListener("click", () => $("#modal").classList.remove("show"));
+  $("#ex-go").addEventListener("click", () => exportRange().catch(e => { $("#ex-prog").textContent = String(e); }));
+  window.addEventListener("resize", () => { drawStatic(); drawOver(); });
+  window.addEventListener("keydown", ev => {
+    if (ev.target && /input|select|textarea/i.test(ev.target.tagName)) return;
+    if (ev.code === "Space") { ev.preventDefault(); $("#btn-play").click(); }
+    if (ev.code === "ArrowRight") setHour(state.hour + 1);
+    if (ev.code === "ArrowLeft") setHour(state.hour - 1);
+    if (ev.code === "Home") setHour(0);
+    if (ev.code === "End" && state.data) setHour(state.data.n - 1);
+  });
+  bindTl();
+  renderScale();
+
+    const EMBEDDED_CSV = "datetime,controller,controller_label,pv_available_kW,load_kW,battery_charge_kW,battery_discharge_kW,soc_kWh,genset_kW,genset_on,genset_load_factor,unmet_load_kW,curtailed_pv_kW\n2025-06-16 00:00:00,oracle,Perfect-foresight unit-commitment ceiling,0.0,3.5764000730074432,0.0,3.576400073007444,48.72702854932106,-8.881784197001252e-16,0,,0.0,0.0\n2025-06-16 01:00:00,oracle,Perfect-foresight unit-commitment ceiling,0.0,3.243779938188075,-0.0,3.2437799381880765,45.345154183614156,-1.3322676295501878e-15,0,,0.0,0.0\n2025-06-16 02:00:00,oracle,Perfect-foresight unit-commitment ceiling,0.0,3.6553665776400703,-0.0,3.65536657764007,41.534171083111985,4.440892098500626e-16,0,,0.0,0.0\n2025-06-16 03:00:00,oracle,Perfect-foresight unit-commitment ceiling,0.0,3.45948623127386,-0.0,3.4594862312738606,37.92740736084905,-4.440892098500626e-16,0,,0.0,0.0\n2025-06-16 04:00:00,oracle,Perfect-foresight unit-commitment ceiling,0.0,3.3832988985953407,-0.0,3.383298898595342,34.40007442374628,-1.3322676295501878e-15,0,,0.0,0.0\n2025-06-16 05:00:00,oracle,Perfect-foresight unit-commitment ceiling,0.0,3.607291955573881,-0.0,3.6072919555738814,30.639212581499848,-4.440892098500626e-16,0,,0.0,0.0\n2025-06-16 06:00:00,oracle,Perfect-foresight unit-commitment ceiling,6.91629445917,14.281249499229617,-0.0,7.364955040059613,22.960716157826198,3.552713678800501e-15,0,,0.0,0.0\n2025-06-16 07:00:00,oracle,Perfect-foresight unit-commitment ceiling,19.907448320812502,25.525693425972392,-0.0,5.618245105159886,17.10329072716899,3.552713678800501e-15,0,,0.0,0.0\n2025-06-16 08:00:00,oracle,Perfect-foresight unit-commitment ceiling,32.9067984757725,20.14874567532413,12.758052800448368,0.0,29.34038508646467,0.0,0,,0.0,0.0\n2025-06-16 09:00:00,oracle,Perfect-foresight unit-commitment ceiling,43.72999287120001,13.911982480308469,29.818010390891544,0.0,57.94081592548545,0.0,0,,0.0,0.0\n2025-06-16 10:00:00,oracle,Perfect-foresight unit-commitment ceiling,46.12500667125,14.314391283482154,31.810615387767847,0.0,88.4524863360122,0.0,0,,0.0,0.0\n2025-06-16 11:00:00,oracle,Perfect-foresight unit-commitment ceiling,43.66511858189249,13.42177815933527,30.243340422557225,0.0,117.46087940976776,0.0,0,,0.0,0.0\n2025-06-16 12:00:00,oracle,Perfect-foresight unit-commitment ceiling,7.59863081565,14.738802990649564,0.0,7.140172174999564,110.01673532308445,0.0,0,,0.0,0.0\n2025-06-16 13:00:00,oracle,Perfect-foresight unit-commitment ceiling,7.294074509250001,14.349594401889014,-0.0,7.055519892639012,102.66084734167616,1.7763568394002505e-15,0,,0.0,0.0\n2025-06-16 14:00:00,oracle,Perfect-foresight unit-commitment ceiling,6.27958472157,14.568042747733507,-0.0,8.288458026163507,94.01953249786544,0.0,0,,0.0,0.0\n2025-06-16 15:00:00,oracle,Perfect-foresight unit-commitment ceiling,9.73392761925,12.610230871047175,-0.0,2.8763032517971743,91.02077906187071,8.881784197001252e-16,0,,0.0,0.0\n2025-06-16 16:00:00,oracle,Perfect-foresight unit-commitment ceiling,12.1344700848525,13.90990583771082,-0.0,1.7754357528583213,89.16975933335453,-1.7763568394002505e-15,0,,0.0,0.0\n2025-06-16 17:00:00,oracle,Perfect-foresight unit-commitment ceiling,4.884811886812501,13.09647967453843,-0.0,8.21166778772593,80.6085038474094,0.0,0,,0.0,0.0\n2025-06-16 18:00:00,oracle,Perfect-foresight unit-commitment ceiling,0.2447666398125,24.870251164537315,13.959020451097047,-0.0,93.99752591019703,38.58450497582186,1,0.9646126243955464,0.0,0.0\n2025-06-16 19:00:00,oracle,Perfect-foresight unit-commitment ceiling,0.0,22.98246979523368,17.01753020476632,0.0,110.32016747118597,40.0,1,1.0,0.0,0.0\n2025-06-16 20:00:00,oracle,Perfect-foresight unit-commitment ceiling,0.0,22.92609318949846,-0.0,22.92609318949846,86.41806303105515,0.0,0,,0.0,0.0\n2025-06-16 21:00:00,oracle,Perfect-foresight unit-commitment ceiling,0.0,16.718648581157115,-0.0,16.718648581157115,68.98766696742456,0.0,0,,0.0,0.0\n2025-06-16 22:00:00,oracle,Perfect-foresight unit-commitment ceiling,0.0,11.857623107401684,-0.0,11.857623107401686,56.625240295677095,-1.7763568394002505e-15,0,,0.0,0.0\n2025-06-16 23:00:00,oracle,Perfect-foresight unit-commitment ceiling,0.0,4.947500240461286,-0.0,4.947500240461288,51.467114727241984,-1.7763568394002505e-15,0,,0.0,0.0\n2025-06-17 00:00:00,oracle,Perfect-foresight unit-commitment ceiling,0.0,3.1619629950306067,-0.0,3.161962995030607,48.170540421347184,-4.440892098500626e-16,0,,0.0,0.0\n2025-06-17 01:00:00,oracle,Perfect-foresight unit-commitment ceiling,0.0,3.132430891595057,0.0,3.132430891595057,44.904755461671066,0.0,0,,0.0,0.0\n2025-06-17 02:00:00,oracle,Perfect-foresight unit-commitment ceiling,0.0,3.2854970821971072,-0.0,3.2854970821971072,41.47938796676827,0.0,0,,0.0,0.0\n2025-06-17 03:00:00,oracle,Perfect-foresight unit-commitment ceiling,0.0,3.9277178758946176,-0.0,3.9277178758946185,37.38445900939995,-8.881784197001252e-16,0,,0.0,0.0\n2025-06-17 04:00:00,oracle,Perfect-foresight unit-commitment ceiling,0.0,3.40552550413101,-0.0,3.4055255041310097,33.83395323414844,4.440892098500626e-16,0,,0.0,0.0\n2025-06-17 05:00:00,oracle,Perfect-foresight unit-commitment ceiling,0.0,3.017124559384275,-0.0,3.017124559384275,30.68838343596233,0.0,0,,0.0,0.0\n2025-06-17 06:00:00,oracle,Perfect-foresight unit-commitment ceiling,6.119633235892499,14.905157466097553,-0.0,8.785524230205056,21.52884125073513,-1.7763568394002505e-15,0,,0.0,0.0\n2025-06-17 07:00:00,oracle,Perfect-foresight unit-commitment ceiling,17.161932573,25.34250971852109,0.0,8.180577145521088,12.999999999999996,0.0,0,,0.0,0.0\n2025-06-17 08:00:00,oracle,Perfect-foresight unit-commitment ceiling,29.004510338212494,20.64738743290528,-0.0,0.0,12.999999999999996,0.0,0,,0.0,8.357122905307214\n2025-06-17 09:00:00,oracle,Perfect-foresight unit-commitment ceiling,38.37292864892999,13.281988593824837,-0.0,0.0,12.999999999999996,0.0,0,,0.0,25.090940055105158\n2025-06-17 10:00:00,oracle,Perfect-foresight unit-commitment ceiling,42.26149186535249,13.918987681630895,0.0,0.0,12.999999999999996,0.0,0,,0.0,28.342504183721594\n2025-06-17 11:00:00,oracle,Perfect-foresight unit-commitment ceiling,42.0125752919925,13.22071083328942,27.17452229332432,0.0,39.064886129057804,0.0,0,,0.0,1.6173421653787585\n2025-06-17 12:00:00,oracle,Perfect-foresight unit-commitment ceiling,44.50076987328,13.001138762758348,31.49963111052165,0.0,69.27827089957016,0.0,0,,0.0,0.0\n2025-06-17 13:00:00,oracle,Perfect-foresight unit-commitment ceiling,40.38399498501,13.281159008385778,27.10283597662422,0.0,95.27439792914386,0.0,0,,0.0,0.0\n2025-06-17 14:00:00,oracle,Perfect-foresight unit-commitment ceiling,34.5636571175325,15.631123370740672,18.932533746791826,0.0,113.43384636095308,0.0,0,,0.0,0.0\n2025-06-17 15:00:00,oracle,Perfect-foresight unit-commitment ceiling,29.472094729012493,15.381549570120448,14.090545158892045,0.0,126.94902249168827,0.0,0,,0.0,0.0\n2025-06-17 16:00:00,oracle,Perfect-foresight unit-commitment ceiling,18.6522856789725,15.471421741737831,3.180863937234669,0.0,130.0,0.0,0,,0.0,0.0\n2025-06-17 17:00:00,oracle,Perfect-foresight unit-commitment ceiling,6.89687931933,13.366988063482356,0.0,6.470108744152356,123.25444533163758,0.0,0,,0.0,0.0\n2025-06-17 18:00:00,oracle,Perfect-foresight unit-commitment ceiling,0.28080632925,20.782073814602384,0.0,20.501267485352383,101.88039644595953,0.0,0,,0.0,0.0\n2025-06-17 19:00:00,oracle,Perfect-foresight unit-commitment ceiling,0.0,25.79555669205609,0.0,25.79555669205609,74.98666950135889,0.0,0,,0.0,0.0\n2025-06-17 20:00:00,oracle,Perfect-foresight unit-commitment ceiling,0.0,22.401878278669848,0.0,6.815377190405081,67.88114759418255,15.586501088264768,1,0.3896625272066192,0.0,0.0\n2025-06-17 21:00:00,oracle,Perfect-foresight unit-commitment ceiling,0.0,17.075310809863495,0.0,0.0,67.88114759418255,17.075310809863495,1,0.4268827702465874,0.0,0.0\n2025-06-17 22:00:00,oracle,Perfect-foresight unit-commitment ceiling,0.0,12.155623251782735,0.0,12.155623251782735,55.2080342949624,0.0,0,,0.0,0.0\n2025-06-17 23:00:00,oracle,Perfect-foresight unit-commitment ceiling,0.0,5.580934757583298,-0.0,5.5809347575833,49.38950759062118,-1.7763568394002505e-15,0,,0.0,0.0\n2025-06-18 00:00:00,oracle,Perfect-foresight unit-commitment ceiling,0.0,3.5069151859919288,0.0,3.5069151859919288,45.73329576484635,0.0,0,,0.0,0.0\n2025-06-18 01:00:00,oracle,Perfect-foresight unit-commitment ceiling,0.0,3.105526817563842,0.0,3.105526817563842,42.49556024133207,0.0,0,,0.0,0.0\n2025-06-18 02:00:00,oracle,Perfect-foresight unit-commitment ceiling,0.0,3.400123971103157,0.0,3.400123971103157,38.950685953552124,0.0,0,,0.0,0.0\n2025-06-18 03:00:00,oracle,Perfect-foresight unit-commitment ceiling,0.0,3.135368050179389,0.0,3.135368050179389,35.68183879436998,0.0,0,,0.0,0.0\n2025-06-18 04:00:00,oracle,Perfect-foresight unit-commitment ceiling,0.0,3.414526842040326,-0.0,3.4145268420403276,32.121948475619014,-1.7763568394002505e-15,0,,0.0,0.0\n2025-06-18 05:00:00,oracle,Perfect-foresight unit-commitment ceiling,0.0,2.9402924454885886,0.0,2.9402924454885886,29.056481693481533,0.0,0,,0.0,0.0\n2025-06-18 06:00:00,oracle,Perfect-foresight unit-commitment ceiling,6.761752745872499,13.96418055226288,-0.0,7.202427806390382,21.54743162429217,-1.7763568394002505e-15,0,,0.0,0.0\n2025-06-18 07:00:00,oracle,Perfect-foresight unit-commitment ceiling,20.05532034453,28.25372874995809,0.0,8.19840840542809,12.999999999999996,0.0,0,,0.0,0.0\n2025-06-18 08:00:00,oracle,Perfect-foresight unit-commitment ceiling,34.5893184838125,22.815618609998428,0.0,0.0,12.999999999999996,0.0,0,,0.0,11.77369987381407\n2025-06-18 09:00:00,oracle,Perfect-foresight unit-commitment ceiling,45.6629931648,13.884610997055606,23.08578729163529,0.0,35.14310928674334,0.0,0,,0.0,8.692594876109101\n2025-06-18 10:00:00,oracle,Perfect-foresight unit-commitment ceiling,53.4563724763125,13.051858039450964,40.40451443686154,0.0,73.89775809083223,0.0,0,,0.0,0.0\n2025-06-18 11:00:00,oracle,Perfect-foresight unit-commitment ceiling,56.38310900244,12.379111770591887,0.0,0.0,73.89775809083223,0.0,0,,0.0,44.00399723184812\n2025-06-18 12:00:00,oracle,Perfect-foresight unit-commitment ceiling,57.05391201587999,12.452820504953024,0.0,0.0,73.89775809083223,0.0,0,,0.0,44.60109151092696\n2025-06-18 13:00:00,oracle,Perfect-foresight unit-commitment ceiling,53.13629077965,14.202489496737403,0.0,0.0,73.89775809083223,0.0,0,,0.0,38.9338012829126\n2025-06-18 14:00:00,oracle,Perfect-foresight unit-commitment ceiling,44.8252745968125,12.727727128599874,32.097547468212625,0.0,104.68464408464833,0.0,0,,0.0,0.0\n2025-06-18 15:00:00,oracle,Perfect-foresight unit-commitment ceiling,34.8106574304,14.116716128191406,20.693941302208593,0.0,124.53357529239133,0.0,0,,0.0,0.0\n2025-06-18 16:00:00,oracle,Perfect-foresight unit-commitment ceiling,20.82016894005,15.121027215579346,5.699141724470653,0.0,129.99999999999997,0.0,0,,0.0,0.0\n2025-06-18 17:00:00,oracle,Perfect-foresight unit-commitment ceiling,7.47304872741,13.6656110132752,0.0,6.1925622858652,123.54380751725436,0.0,0,,0.0,0.0\n2025-06-18 18:00:00,oracle,Perfect-foresight unit-commitment ceiling,0.2901465307125,23.092479396961885,0.0,22.802332866249383,99.77073213355253,0.0,0,,0.0,0.0\n2025-06-18 19:00:00,oracle,Perfect-foresight unit-commitment ceiling,0.0,24.608530433954385,0.0,10.192089082444218,89.1447447183357,14.416441351510167,1,0.3604110337877542,0.0,0.0\n2025-06-18 20:00:00,oracle,Perfect-foresight unit-commitment ceiling,0.0,20.786080645492063,0.0,-0.0,89.1447447183357,20.786080645492063,1,0.5196520161373016,0.0,0.0\n2025-06-18 21:00:00,oracle,Perfect-foresight unit-commitment ceiling,0.0,16.51975271251125,0.0,16.51975271251125,71.92171193225043,0.0,0,,0.0,0.0\n2025-06-18 22:00:00,oracle,Perfect-foresight unit-commitment ceiling,0.0,11.36152658006626,0.0,11.36152658006626,60.07650164406845,0.0,0,,0.0,0.0\n2025-06-18 23:00:00,oracle,Perfect-foresight unit-commitment ceiling,0.0,4.617511066882274,-0.0,4.6175110668822725,55.26241357150337,1.7763568394002505e-15,0,,0.0,0.0\n2025-06-19 00:00:00,oracle,Perfect-foresight unit-commitment ceiling,0.0,3.8288425439236,1.6528921746500488e-13,3.8288425439235994,51.27056927368839,1.6573330667485494e-13,0,,0.0,0.0\n2025-06-19 01:00:00,oracle,Perfect-foresight unit-commitment ceiling,0.0,2.506113086281799,0.0,2.506113086281799,48.657765764954306,0.0,0,,0.0,0.0\n2025-06-19 02:00:00,oracle,Perfect-foresight unit-commitment ceiling,0.0,3.4745680278340068,0.0,3.4745680278340068,45.03527818282804,0.0,0,,0.0,0.0\n2025-06-19 03:00:00,oracle,Perfect-foresight unit-commitment ceiling,0.0,3.5337470842317886,-0.0,3.5337470842317877,41.351092169355596,8.881784197001252e-16,0,,0.0,0.0\n2025-06-19 04:00:00,oracle,Perfect-foresight unit-commitment ceiling,0.0,3.144915771809644,0.0,3.144915771809644,38.07229082226689,0.0,0,,0.0,0.0\n2025-06-19 05:00:00,oracle,Perfect-foresight unit-commitment ceiling,0.0,3.137755005738845,-0.0,3.137755005738846,34.80095508988545,-1.3322676295501878e-15,0,,0.0,0.0\n2025-06-19 06:00:00,oracle,Perfect-foresight unit-commitment ceiling,5.673665140312499,17.031472449769048,-0.0,11.357807309456547,22.959622409362986,1.7763568394002505e-15,0,,0.0,0.0\n2025-06-19 07:00:00,oracle,Perfect-foresight unit-commitment ceiling,15.82305882804,25.375993050262963,0.0,9.552934222222962,12.999999999999996,0.0,0,,0.0,0.0\n2025-06-19 08:00:00,oracle,Perfect-foresight unit-commitment ceiling,26.40665651085,23.014024388921715,-0.0,0.0,12.999999999999996,0.0,0,,0.0,3.3926321219282833\n2025-06-19 09:00:00,oracle,Perfect-foresight unit-commitment ceiling,27.661284756,13.97906388519068,0.0,0.0,12.999999999999996,0.0,0,,0.0,13.68222087080932\n2025-06-19 10:00:00,oracle,Perfect-foresight unit-commitment ceiling,33.49761633405,13.777029967892872,0.0,0.0,12.999999999999996,0.0,0,,0.0,19.72058636615713\n2025-06-19 11:00:00,oracle,Perfect-foresight unit-commitment ceiling,45.077968491412506,12.647872923679325,0.0,0.0,12.999999999999996,0.0,0,,0.0,32.43009556773318\n2025-06-19 12:00:00,oracle,Perfect-foresight unit-commitment ceiling,53.64967714677,14.737085310144074,24.52734659328935,0.0,36.52580439506278,0.0,0,,0.0,14.385245243336577\n2025-06-19 13:00:00,oracle,Perfect-foresight unit-commitment ceiling,47.93747287365001,13.184496804871216,34.75297606877879,0.0,69.85968802697916,0.0,0,,0.0,0.0\n2025-06-19 14:00:00,oracle,Perfect-foresight unit-commitment ceiling,42.73928853599249,13.697664549046063,29.04162398694643,0.0,97.71543518793766,0.0,0,,0.0,0.0\n2025-06-19 15:00:00,oracle,Perfect-foresight unit-commitment ceiling,37.46356765892999,13.25196064193399,24.211607016996,0.0,120.93839282037142,0.0,0,,0.0,0.0\n2025-06-19 16:00:00,oracle,Perfect-foresight unit-commitment ceiling,22.52338337061001,13.076004813231831,9.447378557378178,0.0,130.0,0.0,0,,0.0,0.0\n2025-06-19 17:00:00,oracle,Perfect-foresight unit-commitment ceiling,8.190858773250001,16.23261505099057,-0.0,8.041756277740568,121.61588950878561,1.7763568394002505e-15,0,,0.0,0.0\n2025-06-19 18:00:00,oracle,Perfect-foresight unit-commitment ceiling,0.3066908194125,24.729052679687143,0.0,24.422361860274645,96.15381714286053,0.0,0,,0.0,0.0\n2025-06-19 19:00:00,oracle,Perfect-foresight unit-commitment ceiling,0.0,21.577132437569897,0.0,0.0,96.15381714286053,21.577132437569897,1,0.5394283109392475,0.0,0.0\n2025-06-19 20:00:00,oracle,Perfect-foresight unit-commitment ceiling,0.0,21.48246188484965,0.0,9.204883340452525,86.5570628618696,12.277578544397123,1,0.3069394636099281,0.0,0.0\n2025-06-19 21:00:00,oracle,Perfect-foresight unit-commitment ceiling,0.0,17.12854366225441,0.0,17.12854366225441,68.6993216349396,0.0,0,,0.0,0.0\n2025-06-19 22:00:00,oracle,Perfect-foresight unit-commitment ceiling,0.0,14.029175518543148,-0.0,14.029175518543148,54.07289507017518,0.0,0,,0.0,0.0\n2025-06-19 23:00:00,oracle,Perfect-foresight unit-commitment ceiling,0.0,4.688450964950514,-0.0,4.688450964950512,49.184847041215264,1.7763568394002505e-15,0,,0.0,0.0\n2025-06-20 00:00:00,oracle,Perfect-foresight unit-commitment ceiling,0.0,3.4011352095959944,8.380209624976438e-14,3.4011352095959957,45.63891846442637,8.246982862021419e-14,0,,0.0,0.0\n2025-06-20 01:00:00,oracle,Perfect-foresight unit-commitment ceiling,0.0,3.658188333360689,0.0,3.6581883333606875,41.82499348022071,1.3322676295501878e-15,0,,0.0,0.0\n2025-06-20 02:00:00,oracle,Perfect-foresight unit-commitment ceiling,0.0,3.214577874143055,-0.0,3.2145778741430533,38.47356437088183,1.7763568394002505e-15,0,,0.0,0.0\n2025-06-20 03:00:00,oracle,Perfect-foresight unit-commitment ceiling,0.0,3.3799396241412163,0.0,3.3799396241412154,34.94973371950135,8.881784197001252e-16,0,,0.0,0.0\n2025-06-20 04:00:00,oracle,Perfect-foresight unit-commitment ceiling,0.0,3.691486137042152,0.0,3.6914861370421512,31.101093375175562,8.881784197001252e-16,0,,0.0,0.0\n2025-06-20 05:00:00,oracle,Perfect-foresight unit-commitment ceiling,0.0,3.077275294767841,-0.0,3.0772752947678406,27.89281210027142,4.440892098500626e-16,0,,0.0,0.0\n2025-06-20 06:00:00,oracle,Perfect-foresight unit-commitment ceiling,6.426362872372499,15.941375050337989,-0.0,9.515012177965488,17.972726155099398,1.7763568394002505e-15,0,,0.0,0.0\n2025-06-20 07:00:00,oracle,Perfect-foresight unit-commitment ceiling,19.1184602994,23.88813166968547,0.0,4.769671370285472,12.999999999999996,0.0,0,,0.0,0.0\n2025-06-20 08:00:00,oracle,Perfect-foresight unit-commitment ceiling,32.543761175212495,20.04332867734524,-0.0,0.0,12.999999999999996,0.0,0,,0.0,12.500432497867255\n2025-06-20 09:00:00,oracle,Perfect-foresight unit-commitment ceiling,41.53142235611251,13.099505145519029,0.0,0.0,12.999999999999996,0.0,0,,0.0,28.43191721059348\n2025-06-20 10:00:00,oracle,Perfect-foresight unit-commitment ceiling,51.2769120763725,13.047458274155726,37.231317345365866,0.0,48.71102507587305,0.0,0,,0.0,0.9981364568509008\n2025-06-20 11:00:00,oracle,Perfect-foresight unit-commitment ceiling,54.601018003372495,11.476375699781425,0.0,0.0,48.71102507587305,0.0,0,,0.0,43.124642303591074\n2025-06-20 12:00:00,oracle,Perfect-foresight unit-commitment ceiling,48.93116286645,12.206413224651705,0.0,0.0,48.71102507587305,0.0,0,,0.0,36.7247496417983\n2025-06-20 13:00:00,oracle,Perfect-foresight unit-commitment ceiling,42.8829198408,12.876565012054224,30.006354828745778,0.0,77.49210955335423,0.0,0,,0.0,0.0\n2025-06-20 14:00:00,oracle,Perfect-foresight unit-commitment ceiling,39.578237497012495,10.751257660772112,28.826979836240383,0.0,105.14197727746259,0.0,0,,0.0,0.0\n2025-06-20 15:00:00,oracle,Perfect-foresight unit-commitment ceiling,32.7538688467725,13.972625074803664,18.781243771968832,0.0,123.15631346318835,0.0,0,,0.0,0.0\n2025-06-20 16:00:00,oracle,Perfect-foresight unit-commitment ceiling,21.318252955650003,14.18321651458214,7.135036441067863,0.0,130.0,0.0,0,,0.0,0.0\n2025-06-20 17:00:00,oracle,Perfect-foresight unit-commitment ceiling,7.8364799891325,12.998634994706528,0.0,5.162155005574028,124.61808136870468,0.0,0,,0.0,0.0\n2025-06-20 18:00:00,oracle,Perfect-foresight unit-commitment ceiling,0.300813552,19.512014640685216,0.0,19.211201088685215,104.58901967700551,0.0,0,,0.0,0.0\n2025-06-20 19:00:00,oracle,Perfect-foresight unit-commitment ceiling,0.0,22.17344839598202,0.0,3.772222730535199,100.65620561525388,18.401225665446823,1,0.4600306416361706,0.0,0.0\n2025-06-20 20:00:00,oracle,Perfect-foresight unit-commitment ceiling,0.0,21.23097571998404,0.0,-0.0,100.65620561525388,21.23097571998404,1,0.530774392999601,0.0,0.0\n2025-06-20 21:00:00,oracle,Perfect-foresight unit-commitment ceiling,0.0,17.288954424015444,-0.0,17.288954424015444,82.63122460833863,0.0,0,,0.0,0.0\n2025-06-20 22:00:00,oracle,Perfect-foresight unit-commitment ceiling,0.0,14.187403926144158,-0.0,14.187403926144157,67.83983352508368,1.7763568394002505e-15,0,,0.0,0.0\n2025-06-20 23:00:00,oracle,Perfect-foresight unit-commitment ceiling,0.0,5.87092404192234,-0.0,5.87092404192234,61.718972092208524,0.0,0,,0.0,0.0\n2025-06-21 00:00:00,oracle,Perfect-foresight unit-commitment ceiling,0.0,3.46030166083322,-0.0,3.4603016608332204,58.111358225861714,-4.440892098500626e-16,0,,0.0,0.0\n2025-06-21 01:00:00,oracle,Perfect-foresight unit-commitment ceiling,0.0,3.724869255889383,-0.0,3.7248692558893843,54.22791357420678,-1.3322676295501878e-15,0,,0.0,0.0\n2025-06-21 02:00:00,oracle,Perfect-foresight unit-commitment ceiling,0.0,2.770386659538392,-0.0,2.770386659538392,51.33958581908086,0.0,0,,0.0,0.0\n2025-06-21 03:00:00,oracle,Perfect-foresight unit-commitment ceiling,0.0,3.928679954650444,-0.0,3.9286799546504447,47.2436538252723,-8.881784197001252e-16,0,,0.0,0.0\n2025-06-21 04:00:00,oracle,Perfect-foresight unit-commitment ceiling,0.0,3.3943106041303808,-0.0,3.394310604130382,43.704840391532485,-1.3322676295501878e-15,0,,0.0,0.0\n2025-06-21 05:00:00,oracle,Perfect-foresight unit-commitment ceiling,0.0,3.5490013113312617,-0.0,3.54900131133126,40.004750746932345,1.7763568394002505e-15,0,,0.0,0.0\n2025-06-21 06:00:00,oracle,Perfect-foresight unit-commitment ceiling,5.717527717409999,15.653844311032428,-0.0,9.93631659362243,29.645424584908497,0.0,0,,0.0,0.0\n2025-06-21 07:00:00,oracle,Perfect-foresight unit-commitment ceiling,16.49607450624,32.461804894885745,0.0,15.965730388645746,12.999999999999996,0.0,0,,0.0,0.0\n2025-06-21 08:00:00,oracle,Perfect-foresight unit-commitment ceiling,30.4826090437125,22.667067558398813,-0.0,0.0,12.999999999999996,0.0,0,,0.0,7.8155414853136875\n2025-06-21 09:00:00,oracle,Perfect-foresight unit-commitment ceiling,39.2646509568,13.927538358876058,0.0,0.0,12.999999999999996,0.0,0,,0.0,25.33711259792394\n2025-06-21 10:00:00,oracle,Perfect-foresight unit-commitment ceiling,53.21648092581001,15.050030072085832,38.16645085372418,0.0,49.607973627451216,0.0,0,,0.0,0.0\n2025-06-21 11:00:00,oracle,Perfect-foresight unit-commitment ceiling,56.275474858672496,13.8166300363517,0.0,0.0,49.607973627451216,0.0,0,,0.0,42.4588448223208\n2025-06-21 12:00:00,oracle,Perfect-foresight unit-commitment ceiling,59.37311033325,13.165291162653226,0.0,0.0,49.607973627451216,0.0,0,,0.0,46.20781917059677\n2025-06-21 13:00:00,oracle,Perfect-foresight unit-commitment ceiling,55.72371262437001,11.543926935858211,31.545178242552797,0.0,79.86504567228187,0.0,0,,0.0,12.634607445959002\n2025-06-21 14:00:00,oracle,Perfect-foresight unit-commitment ceiling,47.5304820355125,13.48398391055075,34.04649812496175,0.0,112.52129946550167,0.0,0,,0.0,0.0\n2025-06-21 15:00:00,oracle,Perfect-foresight unit-commitment ceiling,31.7898985896,14.195529616153731,17.59436897344627,0.0,129.39722533663144,0.0,0,,0.0,0.0\n2025-06-21 16:00:00,oracle,Perfect-foresight unit-commitment ceiling,14.548756869,13.920320840296275,0.6284360287037245,0.0,130.0,0.0,0,,0.0,0.0\n2025-06-21 17:00:00,oracle,Perfect-foresight unit-commitment ceiling,5.1288202098,11.523447652387835,0.0,6.3946274425878356,123.33314002847753,0.0,0,,0.0,0.0\n2025-06-21 18:00:00,oracle,Perfect-foresight unit-commitment ceiling,0.1938254815124999,21.107160911837006,-0.0,20.913335430324505,101.52948061231166,0.0,0,,0.0,0.0\n2025-06-21 19:00:00,oracle,Perfect-foresight unit-commitment ceiling,0.0,24.85153862595909,0.0,1.697061453523009,99.76017173931066,23.15447717243608,1,0.5788619293109021,0.0,0.0\n2025-06-21 20:00:00,oracle,Perfect-foresight unit-commitment ceiling,0.0,22.883214110571075,0.0,0.0,99.76017173931066,22.883214110571075,1,0.5720803527642768,0.0,0.0\n2025-06-21 21:00:00,oracle,Perfect-foresight unit-commitment ceiling,0.0,19.098178044757425,-0.0,19.098178044757425,79.84894471650924,0.0,0,,0.0,0.0\n2025-06-21 22:00:00,oracle,Perfect-foresight unit-commitment ceiling,0.0,11.88870766404164,0.0,11.88870766404164,67.45411015419175,0.0,0,,0.0,0.0\n2025-06-21 23:00:00,oracle,Perfect-foresight unit-commitment ceiling,0.0,5.6358928237422425,-0.0,5.6358928237422425,61.57828570503632,0.0,0,,0.0,0.0\n2025-06-22 00:00:00,oracle,Perfect-foresight unit-commitment ceiling,0.0,3.4143638595450394,-0.0,3.414363859545041,58.01856530728289,-1.7763568394002505e-15,0,,0.0,0.0\n2025-06-22 01:00:00,oracle,Perfect-foresight unit-commitment ceiling,0.0,3.656802005861501,-0.0,3.6568020058615005,54.20608566940816,4.440892098500626e-16,0,,0.0,0.0\n2025-06-22 02:00:00,oracle,Perfect-foresight unit-commitment ceiling,0.0,3.742411125132509,-0.0,3.7424111251325094,50.30435235481981,-4.440892098500626e-16,0,,0.0,0.0\n2025-06-22 03:00:00,oracle,Perfect-foresight unit-commitment ceiling,0.0,3.0550123640578866,-0.0,3.0550123640578875,47.11928178967657,-8.881784197001252e-16,0,,0.0,0.0\n2025-06-22 04:00:00,oracle,Perfect-foresight unit-commitment ceiling,0.0,3.499592089225718,-0.0,3.499592089225718,43.470704820058195,0.0,0,,0.0,0.0\n2025-06-22 05:00:00,oracle,Perfect-foresight unit-commitment ceiling,0.0,3.7329708524705194,0.0,3.732970852470519,39.57881367008305,4.440892098500626e-16,0,,0.0,0.0\n2025-06-22 06:00:00,oracle,Perfect-foresight unit-commitment ceiling,5.083987830052501,15.504183416862144,0.0,10.420195586809644,28.715008784364407,0.0,0,,0.0,0.0\n2025-06-22 07:00:00,oracle,Perfect-foresight unit-commitment ceiling,14.8570902325125,29.930397135950727,0.0,15.073306903438228,12.999999999999996,0.0,0,,0.0,0.0\n2025-06-22 08:00:00,oracle,Perfect-foresight unit-commitment ceiling,26.373536896049995,21.63923737258557,-0.0,0.0,12.999999999999996,0.0,0,,0.0,4.734299523464426\n2025-06-22 09:00:00,oracle,Perfect-foresight unit-commitment ceiling,41.050809828000006,13.552339980855812,-0.0,0.0,12.999999999999996,0.0,0,,0.0,27.498469847144193\n2025-06-22 10:00:00,oracle,Perfect-foresight unit-commitment ceiling,47.23412559444,12.860896759613956,34.373228834826044,0.0,45.96964288082009,0.0,0,,0.0,0.0\n2025-06-22 11:00:00,oracle,Perfect-foresight unit-commitment ceiling,55.7307445266,14.331699071797026,0.0,0.0,45.96964288082009,0.0,0,,0.0,41.39904545480297\n2025-06-22 12:00:00,oracle,Perfect-foresight unit-commitment ceiling,52.2387014734125,13.392828877588926,0.0,0.0,45.96964288082009,0.0,0,,0.0,38.84587259582357\n2025-06-22 13:00:00,oracle,Perfect-foresight unit-commitment ceiling,50.4705426920325,13.604513831602665,24.621396075871676,0.0,69.58565637054679,0.0,0,,0.0,12.24463278455816\n2025-06-22 14:00:00,oracle,Perfect-foresight unit-commitment ceiling,46.3966760466,13.666107259937483,32.730568786662516,0.0,100.97971508315308,0.0,0,,0.0,0.0\n2025-06-22 15:00:00,oracle,Perfect-foresight unit-commitment ceiling,36.56072839680001,14.16762453902819,22.39310385777182,0.0,122.45842576033664,0.0,0,,0.0,0.0\n2025-06-22 16:00:00,oracle,Perfect-foresight unit-commitment ceiling,22.66453078848,14.801896120223322,7.862634668256678,0.0,130.0,0.0,0,,0.0,0.0\n2025-06-22 17:00:00,oracle,Perfect-foresight unit-commitment ceiling,8.2507134887325,13.141650178875786,0.0,4.890936690143285,124.90084600932262,0.0,0,,0.0,0.0\n2025-06-22 18:00:00,oracle,Perfect-foresight unit-commitment ceiling,0.32594861376,23.644622523384477,0.0,23.318673909624476,100.5894478750559,0.0,0,,0.0,0.0\n2025-06-22 19:00:00,oracle,Perfect-foresight unit-commitment ceiling,0.0,25.57784315635612,0.0,9.09420606116502,91.10808263426529,16.4836370951911,1,0.4120909273797775,0.0,0.0\n2025-06-22 20:00:00,oracle,Perfect-foresight unit-commitment ceiling,0.0,20.23391342678669,0.0,0.0,91.10808263426529,20.23391342678669,1,0.5058478356696672,0.0,0.0\n2025-06-22 21:00:00,oracle,Perfect-foresight unit-commitment ceiling,0.0,18.18121926711712,8.878821980605787e-15,18.18121926711713,72.15285122263467,1.7733946230047848e-15,0,,0.0,0.0\n2025-06-22 22:00:00,oracle,Perfect-foresight unit-commitment ceiling,0.0,11.900428316640824,-0.0,11.900428316640824,59.74579703527175,0.0,0,,0.0,0.0\n2025-06-22 23:00:00,oracle,Perfect-foresight unit-commitment ceiling,0.0,4.980726940966605,-0.0,4.980726940966605,54.55303023690206,0.0,0,,0.0,0.0\n2025-06-16 00:00:00,baseline,Rule-based merit-order baseline,0.0,3.5764000730074432,0.0,0.0,12.999999999999996,3.5764000730074432,1,0.08941000182518608,0.0,0.0\n2025-06-16 01:00:00,baseline,Rule-based merit-order baseline,0.0,3.243779938188075,0.0,0.0,12.999999999999996,3.243779938188075,1,0.08109449845470187,0.0,0.0\n2025-06-16 02:00:00,baseline,Rule-based merit-order baseline,0.0,3.6553665776400703,0.0,0.0,12.999999999999996,3.6553665776400703,1,0.09138416444100175,0.0,0.0\n2025-06-16 03:00:00,baseline,Rule-based merit-order baseline,0.0,3.45948623127386,0.0,0.0,12.999999999999996,3.45948623127386,1,0.0864871557818465,0.0,0.0\n2025-06-16 04:00:00,baseline,Rule-based merit-order baseline,0.0,3.3832988985953407,0.0,0.0,12.999999999999996,3.3832988985953407,1,0.08458247246488351,0.0,0.0\n2025-06-16 05:00:00,baseline,Rule-based merit-order baseline,0.0,3.607291955573881,0.0,0.0,12.999999999999996,3.607291955573881,1,0.09018229888934702,0.0,0.0\n2025-06-16 06:00:00,baseline,Rule-based merit-order baseline,6.91629445917,14.281249499229617,0.0,0.0,12.999999999999996,7.364955040059616,1,0.1841238760014904,0.0,0.0\n2025-06-16 07:00:00,baseline,Rule-based merit-order baseline,19.907448320812502,25.525693425972392,0.0,0.0,12.999999999999996,5.61824510515989,1,0.14045612762899723,0.0,0.0\n2025-06-16 08:00:00,baseline,Rule-based merit-order baseline,32.9067984757725,20.14874567532413,12.758052800448368,0.0,25.23709435929568,0.0,0,,0.0,0.0\n2025-06-16 09:00:00,baseline,Rule-based merit-order baseline,43.72999287120001,13.911982480308469,29.818010390891544,0.0,53.837525198316456,0.0,0,,0.0,0.0\n2025-06-16 10:00:00,baseline,Rule-based merit-order baseline,46.12500667125,14.314391283482154,31.810615387767847,0.0,84.3491956088432,0.0,0,,0.0,0.0\n2025-06-16 11:00:00,baseline,Rule-based merit-order baseline,43.66511858189249,13.42177815933527,30.243340422557225,0.0,113.35758868259876,0.0,0,,0.0,0.0\n2025-06-16 12:00:00,baseline,Rule-based merit-order baseline,7.59863081565,14.738802990649564,0.0,7.140172174999564,105.91344459591545,0.0,0,,0.0,0.0\n2025-06-16 13:00:00,baseline,Rule-based merit-order baseline,7.294074509250001,14.349594401889014,0.0,7.055519892639014,98.55755661450715,0.0,0,,0.0,0.0\n2025-06-16 14:00:00,baseline,Rule-based merit-order baseline,6.27958472157,14.568042747733507,0.0,8.288458026163507,89.91624177069644,0.0,0,,0.0,0.0\n2025-06-16 15:00:00,baseline,Rule-based merit-order baseline,9.73392761925,12.610230871047175,0.0,2.876303251797175,86.91748833470172,0.0,0,,0.0,0.0\n2025-06-16 16:00:00,baseline,Rule-based merit-order baseline,12.1344700848525,13.90990583771082,0.0,1.7754357528583196,85.06646860618555,0.0,0,,0.0,0.0\n2025-06-16 17:00:00,baseline,Rule-based merit-order baseline,4.884811886812501,13.09647967453843,0.0,8.21166778772593,76.50521312024041,0.0,0,,0.0,0.0\n2025-06-16 18:00:00,baseline,Rule-based merit-order baseline,0.2447666398125,24.870251164537315,0.0,24.625484524724815,50.83137073751763,0.0,0,,0.0,0.0\n2025-06-16 19:00:00,baseline,Rule-based merit-order baseline,0.0,22.98246979523368,0.0,22.98246979523368,26.870489622829783,0.0,0,,0.0,0.0\n2025-06-16 20:00:00,baseline,Rule-based merit-order baseline,0.0,22.92609318949846,0.0,13.30410627538981,12.999999999999996,9.62198691410865,1,0.24054967285271625,0.0,0.0\n2025-06-16 21:00:00,baseline,Rule-based merit-order baseline,0.0,16.718648581157115,0.0,0.0,12.999999999999996,16.718648581157115,1,0.4179662145289279,0.0,0.0\n2025-06-16 22:00:00,baseline,Rule-based merit-order baseline,0.0,11.857623107401684,0.0,0.0,12.999999999999996,11.857623107401684,1,0.2964405776850421,0.0,0.0\n2025-06-16 23:00:00,baseline,Rule-based merit-order baseline,0.0,4.947500240461286,0.0,0.0,12.999999999999996,4.947500240461286,1,0.12368750601153215,0.0,0.0\n2025-06-17 00:00:00,baseline,Rule-based merit-order baseline,0.0,3.1619629950306067,0.0,0.0,12.999999999999996,3.1619629950306067,1,0.07904907487576517,0.0,0.0\n2025-06-17 01:00:00,baseline,Rule-based merit-order baseline,0.0,3.132430891595057,0.0,0.0,12.999999999999996,3.132430891595057,1,0.07831077228987643,0.0,0.0\n2025-06-17 02:00:00,baseline,Rule-based merit-order baseline,0.0,3.2854970821971072,0.0,0.0,12.999999999999996,3.2854970821971072,1,0.08213742705492769,0.0,0.0\n2025-06-17 03:00:00,baseline,Rule-based merit-order baseline,0.0,3.9277178758946176,0.0,0.0,12.999999999999996,3.9277178758946176,1,0.09819294689736544,0.0,0.0\n2025-06-17 04:00:00,baseline,Rule-based merit-order baseline,0.0,3.40552550413101,0.0,0.0,12.999999999999996,3.40552550413101,1,0.08513813760327525,0.0,0.0\n2025-06-17 05:00:00,baseline,Rule-based merit-order baseline,0.0,3.017124559384275,0.0,0.0,12.999999999999996,3.017124559384275,1,0.07542811398460687,0.0,0.0\n2025-06-17 06:00:00,baseline,Rule-based merit-order baseline,6.119633235892499,14.905157466097553,0.0,0.0,12.999999999999996,8.785524230205054,1,0.21963810575512635,0.0,0.0\n2025-06-17 07:00:00,baseline,Rule-based merit-order baseline,17.161932573,25.34250971852109,0.0,0.0,12.999999999999996,8.180577145521088,1,0.2045144286380272,0.0,0.0\n2025-06-17 08:00:00,baseline,Rule-based merit-order baseline,29.004510338212494,20.64738743290528,8.357122905307214,0.0,21.01587069469422,0.0,0,,0.0,0.0\n2025-06-17 09:00:00,baseline,Rule-based merit-order baseline,38.37292864892999,13.281988593824837,25.090940055105158,0.0,45.08225494785884,0.0,0,,0.0,0.0\n2025-06-17 10:00:00,baseline,Rule-based merit-order baseline,42.26149186535249,13.918987681630895,28.342504183721594,0.0,72.26742995064177,0.0,0,,0.0,0.0\n2025-06-17 11:00:00,baseline,Rule-based merit-order baseline,42.0125752919925,13.22071083328942,28.791864458703078,0.0,99.88361618784083,0.0,0,,0.0,0.0\n2025-06-17 12:00:00,baseline,Rule-based merit-order baseline,44.50076987328,13.001138762758348,31.398500620551705,0.0,130.0,0.0,0,,0.0,0.10113048996994678\n2025-06-17 13:00:00,baseline,Rule-based merit-order baseline,40.38399498501,13.281159008385778,0.0,0.0,130.0,0.0,0,,0.0,27.10283597662422\n2025-06-17 14:00:00,baseline,Rule-based merit-order baseline,34.5636571175325,15.631123370740672,0.0,0.0,130.0,0.0,0,,0.0,18.932533746791826\n2025-06-17 15:00:00,baseline,Rule-based merit-order baseline,29.472094729012493,15.381549570120448,0.0,0.0,130.0,0.0,0,,0.0,14.090545158892045\n2025-06-17 16:00:00,baseline,Rule-based merit-order baseline,18.6522856789725,15.471421741737831,0.0,0.0,130.0,0.0,0,,0.0,3.180863937234669\n2025-06-17 17:00:00,baseline,Rule-based merit-order baseline,6.89687931933,13.366988063482356,0.0,6.470108744152356,123.25444533163758,0.0,0,,0.0,0.0\n2025-06-17 18:00:00,baseline,Rule-based merit-order baseline,0.28080632925,20.782073814602384,0.0,20.501267485352383,101.88039644595953,0.0,0,,0.0,0.0\n2025-06-17 19:00:00,baseline,Rule-based merit-order baseline,0.0,25.79555669205609,0.0,25.79555669205609,74.98666950135889,0.0,0,,0.0,0.0\n2025-06-17 20:00:00,baseline,Rule-based merit-order baseline,0.0,22.401878278669848,0.0,22.401878278669848,51.63109688608512,0.0,0,,0.0,0.0\n2025-06-17 21:00:00,baseline,Rule-based merit-order baseline,0.0,17.075310809863495,0.0,17.075310809863495,33.82885474427951,0.0,0,,0.0,0.0\n2025-06-17 22:00:00,baseline,Rule-based merit-order baseline,0.0,12.155623251782735,0.0,12.155623251782735,21.155741445059355,0.0,0,,0.0,0.0\n2025-06-17 23:00:00,baseline,Rule-based merit-order baseline,0.0,5.580934757583298,0.0,5.580934757583298,15.337214740718135,0.0,0,,0.0,0.0\n2025-06-18 00:00:00,baseline,Rule-based merit-order baseline,0.0,3.5069151859919288,0.0,2.2417776260574427,12.999999999999996,1.265137559934486,1,0.03162843899836215,0.0,0.0\n2025-06-18 01:00:00,baseline,Rule-based merit-order baseline,0.0,3.105526817563842,0.0,0.0,12.999999999999996,3.105526817563842,1,0.07763817043909606,0.0,0.0\n2025-06-18 02:00:00,baseline,Rule-based merit-order baseline,0.0,3.400123971103157,0.0,0.0,12.999999999999996,3.400123971103157,1,0.08500309927757892,0.0,0.0\n2025-06-18 03:00:00,baseline,Rule-based merit-order baseline,0.0,3.135368050179389,0.0,0.0,12.999999999999996,3.135368050179389,1,0.07838420125448473,0.0,0.0\n2025-06-18 04:00:00,baseline,Rule-based merit-order baseline,0.0,3.414526842040326,0.0,0.0,12.999999999999996,3.414526842040326,1,0.08536317105100814,0.0,0.0\n2025-06-18 05:00:00,baseline,Rule-based merit-order baseline,0.0,2.9402924454885886,0.0,0.0,12.999999999999996,2.9402924454885886,1,0.07350731113721472,0.0,0.0\n2025-06-18 06:00:00,baseline,Rule-based merit-order baseline,6.761752745872499,13.96418055226288,0.0,0.0,12.999999999999996,7.20242780639038,1,0.1800606951597595,0.0,0.0\n2025-06-18 07:00:00,baseline,Rule-based merit-order baseline,20.05532034453,28.25372874995809,0.0,0.0,12.999999999999996,8.19840840542809,1,0.20496021013570226,0.0,0.0\n2025-06-18 08:00:00,baseline,Rule-based merit-order baseline,34.5893184838125,22.815618609998428,11.77369987381407,0.0,24.2929362001721,0.0,0,,0.0,0.0\n2025-06-18 09:00:00,baseline,Rule-based merit-order baseline,45.6629931648,13.884610997055606,31.778382167744393,0.0,54.773689592161574,0.0,0,,0.0,0.0\n2025-06-18 10:00:00,baseline,Rule-based merit-order baseline,53.4563724763125,13.051858039450964,40.40451443686154,0.0,93.52833839625046,0.0,0,,0.0,0.0\n2025-06-18 11:00:00,baseline,Rule-based merit-order baseline,56.38310900244,12.379111770591887,38.02433574496873,0.0,130.0,0.0,0,,0.0,5.979661486879387\n2025-06-18 12:00:00,baseline,Rule-based merit-order baseline,57.05391201587999,12.452820504953024,0.0,0.0,130.0,0.0,0,,0.0,44.60109151092696\n2025-06-18 13:00:00,baseline,Rule-based merit-order baseline,53.13629077965,14.202489496737403,0.0,0.0,130.0,0.0,0,,0.0,38.9338012829126\n2025-06-18 14:00:00,baseline,Rule-based merit-order baseline,44.8252745968125,12.727727128599874,0.0,0.0,130.0,0.0,0,,0.0,32.097547468212625\n2025-06-18 15:00:00,baseline,Rule-based merit-order baseline,34.8106574304,14.116716128191406,0.0,0.0,130.0,0.0,0,,0.0,20.693941302208593\n2025-06-18 16:00:00,baseline,Rule-based merit-order baseline,20.82016894005,15.121027215579346,0.0,0.0,130.0,0.0,0,,0.0,5.699141724470653\n2025-06-18 17:00:00,baseline,Rule-based merit-order baseline,7.47304872741,13.6656110132752,0.0,6.1925622858652,123.5438075172544,0.0,0,,0.0,0.0\n2025-06-18 18:00:00,baseline,Rule-based merit-order baseline,0.2901465307125,23.092479396961885,0.0,22.802332866249383,99.77073213355256,0.0,0,,0.0,0.0\n2025-06-18 19:00:00,baseline,Rule-based merit-order baseline,0.0,24.608530433954385,0.0,24.608530433954385,74.11456561234411,0.0,0,,0.0,0.0\n2025-06-18 20:00:00,baseline,Rule-based merit-order baseline,0.0,20.786080645492063,0.0,20.786080645492063,52.44357848065471,0.0,0,,0.0,0.0\n2025-06-18 21:00:00,baseline,Rule-based merit-order baseline,0.0,16.51975271251125,0.0,16.51975271251125,35.22054569456944,0.0,0,,0.0,0.0\n2025-06-18 22:00:00,baseline,Rule-based merit-order baseline,0.0,11.36152658006626,0.0,11.36152658006626,23.375335406387457,0.0,0,,0.0,0.0\n2025-06-18 23:00:00,baseline,Rule-based merit-order baseline,0.0,4.617511066882274,0.0,4.617511066882274,18.56124733382238,0.0,0,,0.0,0.0\n2025-06-19 00:00:00,baseline,Rule-based merit-order baseline,0.0,3.8288425439236,0.0,3.8288425439236,14.569403036007234,0.0,0,,0.0,0.0\n2025-06-19 01:00:00,baseline,Rule-based merit-order baseline,0.0,2.506113086281799,0.0,1.5053185105732394,12.999999999999996,1.0007945757085597,1,0.025019864392713993,0.0,0.0\n2025-06-19 02:00:00,baseline,Rule-based merit-order baseline,0.0,3.4745680278340068,0.0,0.0,12.999999999999996,3.4745680278340068,1,0.08686420069585017,0.0,0.0\n2025-06-19 03:00:00,baseline,Rule-based merit-order baseline,0.0,3.5337470842317886,0.0,0.0,12.999999999999996,3.5337470842317886,1,0.08834367710579472,0.0,0.0\n2025-06-19 04:00:00,baseline,Rule-based merit-order baseline,0.0,3.144915771809644,0.0,0.0,12.999999999999996,3.144915771809644,1,0.0786228942952411,0.0,0.0\n2025-06-19 05:00:00,baseline,Rule-based merit-order baseline,0.0,3.137755005738845,0.0,0.0,12.999999999999996,3.137755005738845,1,0.07844387514347112,0.0,0.0\n2025-06-19 06:00:00,baseline,Rule-based merit-order baseline,5.673665140312499,17.031472449769048,0.0,0.0,12.999999999999996,11.357807309456549,1,0.2839451827364137,0.0,0.0\n2025-06-19 07:00:00,baseline,Rule-based merit-order baseline,15.82305882804,25.375993050262963,0.0,0.0,12.999999999999996,9.552934222222962,1,0.23882335555557405,0.0,0.0\n2025-06-19 08:00:00,baseline,Rule-based merit-order baseline,26.40665651085,23.014024388921715,3.3926321219282833,0.0,16.254098415469393,0.0,0,,0.0,0.0\n2025-06-19 09:00:00,baseline,Rule-based merit-order baseline,27.661284756,13.97906388519068,13.68222087080932,0.0,29.377623647700304,0.0,0,,0.0,0.0\n2025-06-19 10:00:00,baseline,Rule-based merit-order baseline,33.49761633405,13.777029967892872,19.72058636615713,0.0,48.29294559830578,0.0,0,,0.0,0.0\n2025-06-19 11:00:00,baseline,Rule-based merit-order baseline,45.077968491412506,12.647872923679325,32.43009556773318,0.0,79.39880052386155,0.0,0,,0.0,0.0\n2025-06-19 12:00:00,baseline,Rule-based merit-order baseline,53.64967714677,14.737085310144074,38.91259183662593,0.0,116.72244744063991,0.0,0,,0.0,0.0\n2025-06-19 13:00:00,baseline,Rule-based merit-order baseline,47.93747287365001,13.184496804871216,13.842805460134912,0.0,130.0,0.0,0,,0.0,20.91017060864388\n2025-06-19 14:00:00,baseline,Rule-based merit-order baseline,42.73928853599249,13.697664549046063,0.0,0.0,130.0,0.0,0,,0.0,29.04162398694643\n2025-06-19 15:00:00,baseline,Rule-based merit-order baseline,37.46356765892999,13.25196064193399,0.0,0.0,130.0,0.0,0,,0.0,24.211607016996\n2025-06-19 16:00:00,baseline,Rule-based merit-order baseline,22.52338337061001,13.076004813231831,0.0,0.0,130.0,0.0,0,,0.0,9.447378557378178\n2025-06-19 17:00:00,baseline,Rule-based merit-order baseline,8.190858773250001,16.23261505099057,0.0,8.04175627774057,121.61588950878561,0.0,0,,0.0,0.0\n2025-06-19 18:00:00,baseline,Rule-based merit-order baseline,0.3066908194125,24.729052679687143,0.0,24.422361860274645,96.15381714286053,0.0,0,,0.0,0.0\n2025-06-19 19:00:00,baseline,Rule-based merit-order baseline,0.0,21.577132437569897,0.0,21.577132437569897,73.65810150660158,0.0,0,,0.0,0.0\n2025-06-19 20:00:00,baseline,Rule-based merit-order baseline,0.0,21.48246188484965,0.0,21.48246188484965,51.26108674448725,0.0,0,,0.0,0.0\n2025-06-19 21:00:00,baseline,Rule-based merit-order baseline,0.0,17.12854366225441,0.0,17.12854366225441,33.403345517557256,0.0,0,,0.0,0.0\n2025-06-19 22:00:00,baseline,Rule-based merit-order baseline,0.0,14.029175518543148,0.0,14.029175518543148,18.77691895279284,0.0,0,,0.0,0.0\n2025-06-19 23:00:00,baseline,Rule-based merit-order baseline,0.0,4.688450964950514,0.0,4.688450964950514,13.888870923832926,0.0,0,,0.0,0.0\n2025-06-20 00:00:00,baseline,Rule-based merit-order baseline,0.0,3.4011352095959944,0.0,0.8525750393348122,12.999999999999996,2.548560170261182,1,0.06371400425652955,0.0,0.0\n2025-06-20 01:00:00,baseline,Rule-based merit-order baseline,0.0,3.658188333360689,0.0,0.0,12.999999999999996,3.658188333360689,1,0.09145470833401723,0.0,0.0\n2025-06-20 02:00:00,baseline,Rule-based merit-order baseline,0.0,3.214577874143055,0.0,0.0,12.999999999999996,3.214577874143055,1,0.08036444685357638,0.0,0.0\n2025-06-20 03:00:00,baseline,Rule-based merit-order baseline,0.0,3.3799396241412163,0.0,0.0,12.999999999999996,3.3799396241412163,1,0.0844984906035304,0.0,0.0\n2025-06-20 04:00:00,baseline,Rule-based merit-order baseline,0.0,3.691486137042152,0.0,0.0,12.999999999999996,3.691486137042152,1,0.0922871534260538,0.0,0.0\n2025-06-20 05:00:00,baseline,Rule-based merit-order baseline,0.0,3.077275294767841,0.0,0.0,12.999999999999996,3.077275294767841,1,0.07693188236919603,0.0,0.0\n2025-06-20 06:00:00,baseline,Rule-based merit-order baseline,6.426362872372499,15.941375050337989,0.0,0.0,12.999999999999996,9.51501217796549,1,0.23787530444913724,0.0,0.0\n2025-06-20 07:00:00,baseline,Rule-based merit-order baseline,19.1184602994,23.88813166968547,0.0,0.0,12.999999999999996,4.769671370285472,1,0.1192417842571368,0.0,0.0\n2025-06-20 08:00:00,baseline,Rule-based merit-order baseline,32.543761175212495,20.04332867734524,12.500432497867255,0.0,24.989993645662906,0.0,0,,0.0,0.0\n2025-06-20 09:00:00,baseline,Rule-based merit-order baseline,41.53142235611251,13.099505145519029,28.43191721059348,0.0,52.26093061101923,0.0,0,,0.0,0.0\n2025-06-20 10:00:00,baseline,Rule-based merit-order baseline,51.2769120763725,13.047458274155726,38.22945380221677,0.0,88.92933454375893,0.0,0,,0.0,0.0\n2025-06-20 11:00:00,baseline,Rule-based merit-order baseline,54.601018003372495,11.476375699781425,42.81912871271124,0.0,130.0,0.0,0,,0.0,0.30551359087983343\n2025-06-20 12:00:00,baseline,Rule-based merit-order baseline,48.93116286645,12.206413224651705,0.0,0.0,130.0,0.0,0,,0.0,36.7247496417983\n2025-06-20 13:00:00,baseline,Rule-based merit-order baseline,42.8829198408,12.876565012054224,0.0,0.0,130.0,0.0,0,,0.0,30.006354828745778\n2025-06-20 14:00:00,baseline,Rule-based merit-order baseline,39.578237497012495,10.751257660772112,0.0,0.0,130.0,0.0,0,,0.0,28.826979836240383\n2025-06-20 15:00:00,baseline,Rule-based merit-order baseline,32.7538688467725,13.972625074803664,0.0,0.0,130.0,0.0,0,,0.0,18.781243771968832\n2025-06-20 16:00:00,baseline,Rule-based merit-order baseline,21.318252955650003,14.18321651458214,0.0,0.0,130.0,0.0,0,,0.0,7.135036441067863\n2025-06-20 17:00:00,baseline,Rule-based merit-order baseline,7.8364799891325,12.998634994706528,0.0,5.162155005574028,124.61808136870468,0.0,0,,0.0,0.0\n2025-06-20 18:00:00,baseline,Rule-based merit-order baseline,0.300813552,19.512014640685216,0.0,19.211201088685215,104.58901967700551,0.0,0,,0.0,0.0\n2025-06-20 19:00:00,baseline,Rule-based merit-order baseline,0.0,22.17344839598202,0.0,22.17344839598202,81.47160167744063,0.0,0,,0.0,0.0\n2025-06-20 20:00:00,baseline,Rule-based merit-order baseline,0.0,21.23097571998404,0.0,21.23097571998404,59.33677936687836,0.0,0,,0.0,0.0\n2025-06-20 21:00:00,baseline,Rule-based merit-order baseline,0.0,17.288954424015444,0.0,17.288954424015444,41.311798359963106,0.0,0,,0.0,0.0\n2025-06-20 22:00:00,baseline,Rule-based merit-order baseline,0.0,14.187403926144158,0.0,14.187403926144158,26.52040727670815,0.0,0,,0.0,0.0\n2025-06-20 23:00:00,baseline,Rule-based merit-order baseline,0.0,5.87092404192234,0.0,5.87092404192234,20.399545843833,0.0,0,,0.0,0.0\n2025-06-21 00:00:00,baseline,Rule-based merit-order baseline,0.0,3.46030166083322,0.0,3.46030166083322,16.791931977486193,0.0,0,,0.0,0.0\n2025-06-21 01:00:00,baseline,Rule-based merit-order baseline,0.0,3.724869255889383,0.0,3.6370933823771683,12.999999999999996,0.08777587351221472,1,0.002194396837805368,0.0,0.0\n2025-06-21 02:00:00,baseline,Rule-based merit-order baseline,0.0,2.770386659538392,0.0,0.0,12.999999999999996,2.770386659538392,1,0.0692596664884598,0.0,0.0\n2025-06-21 03:00:00,baseline,Rule-based merit-order baseline,0.0,3.928679954650444,0.0,0.0,12.999999999999996,3.928679954650444,1,0.09821699886626109,0.0,0.0\n2025-06-21 04:00:00,baseline,Rule-based merit-order baseline,0.0,3.3943106041303808,0.0,0.0,12.999999999999996,3.3943106041303808,1,0.08485776510325951,0.0,0.0\n2025-06-21 05:00:00,baseline,Rule-based merit-order baseline,0.0,3.5490013113312617,0.0,0.0,12.999999999999996,3.5490013113312617,1,0.08872503278328155,0.0,0.0\n2025-06-21 06:00:00,baseline,Rule-based merit-order baseline,5.717527717409999,15.653844311032428,0.0,0.0,12.999999999999996,9.93631659362243,1,0.24840791484056074,0.0,0.0\n2025-06-21 07:00:00,baseline,Rule-based merit-order baseline,16.49607450624,32.461804894885745,0.0,0.0,12.999999999999996,15.965730388645746,1,0.3991432597161436,0.0,0.0\n2025-06-21 08:00:00,baseline,Rule-based merit-order baseline,30.4826090437125,22.667067558398813,7.8155414853136875,0.0,20.496404045405136,0.0,0,,0.0,0.0\n2025-06-21 09:00:00,baseline,Rule-based merit-order baseline,39.2646509568,13.927538358876058,25.33711259792394,0.0,44.798908706774625,0.0,0,,0.0,0.0\n2025-06-21 10:00:00,baseline,Rule-based merit-order baseline,53.21648092581001,15.050030072085832,38.16645085372418,0.0,81.40688233422584,0.0,0,,0.0,0.0\n2025-06-21 11:00:00,baseline,Rule-based merit-order baseline,56.275474858672496,13.8166300363517,42.4588448223208,0.0,122.13197562269167,0.0,0,,0.0,0.0\n2025-06-21 12:00:00,baseline,Rule-based merit-order baseline,59.37311033325,13.165291162653226,8.202982464106135,0.0,130.0,0.0,0,,0.0,38.004836706490636\n2025-06-21 13:00:00,baseline,Rule-based merit-order baseline,55.72371262437001,11.543926935858211,0.0,0.0,130.0,0.0,0,,0.0,44.1797856885118\n2025-06-21 14:00:00,baseline,Rule-based merit-order baseline,47.5304820355125,13.48398391055075,0.0,0.0,130.0,0.0,0,,0.0,34.04649812496175\n2025-06-21 15:00:00,baseline,Rule-based merit-order baseline,31.7898985896,14.195529616153731,0.0,0.0,130.0,0.0,0,,0.0,17.59436897344627\n2025-06-21 16:00:00,baseline,Rule-based merit-order baseline,14.548756869,13.920320840296275,0.0,0.0,130.0,0.0,0,,0.0,0.6284360287037245\n2025-06-21 17:00:00,baseline,Rule-based merit-order baseline,5.1288202098,11.523447652387835,0.0,6.3946274425878356,123.33314002847753,0.0,0,,0.0,0.0\n2025-06-21 18:00:00,baseline,Rule-based merit-order baseline,0.1938254815124999,21.107160911837006,0.0,20.913335430324505,101.52948061231166,0.0,0,,0.0,0.0\n2025-06-21 19:00:00,baseline,Rule-based merit-order baseline,0.0,24.85153862595909,0.0,24.85153862595909,75.61996053726855,0.0,0,,0.0,0.0\n2025-06-21 20:00:00,baseline,Rule-based merit-order baseline,0.0,22.883214110571075,0.0,22.883214110571075,51.76256062722699,0.0,0,,0.0,0.0\n2025-06-21 21:00:00,baseline,Rule-based merit-order baseline,0.0,19.098178044757425,0.0,19.098178044757425,31.85133360442557,0.0,0,,0.0,0.0\n2025-06-21 22:00:00,baseline,Rule-based merit-order baseline,0.0,11.88870766404164,0.0,11.88870766404164,19.456499042108085,0.0,0,,0.0,0.0\n2025-06-21 23:00:00,baseline,Rule-based merit-order baseline,0.0,5.6358928237422425,0.0,5.6358928237422425,13.580674592952654,0.0,0,,0.0,0.0\n2025-06-22 00:00:00,baseline,Rule-based merit-order baseline,0.0,3.4143638595450394,0.0,0.5569635035338276,12.999999999999996,2.857400356011212,1,0.07143500890028029,0.0,0.0\n2025-06-22 01:00:00,baseline,Rule-based merit-order baseline,0.0,3.656802005861501,0.0,0.0,12.999999999999996,3.656802005861501,1,0.09142005014653752,0.0,0.0\n2025-06-22 02:00:00,baseline,Rule-based merit-order baseline,0.0,3.742411125132509,0.0,0.0,12.999999999999996,3.742411125132509,1,0.09356027812831272,0.0,0.0\n2025-06-22 03:00:00,baseline,Rule-based merit-order baseline,0.0,3.0550123640578866,0.0,0.0,12.999999999999996,3.0550123640578866,1,0.07637530910144716,0.0,0.0\n2025-06-22 04:00:00,baseline,Rule-based merit-order baseline,0.0,3.499592089225718,0.0,0.0,12.999999999999996,3.499592089225718,1,0.08748980223064295,0.0,0.0\n2025-06-22 05:00:00,baseline,Rule-based merit-order baseline,0.0,3.7329708524705194,0.0,0.0,12.999999999999996,3.7329708524705194,1,0.09332427131176299,0.0,0.0\n2025-06-22 06:00:00,baseline,Rule-based merit-order baseline,5.083987830052501,15.504183416862144,0.0,0.0,12.999999999999996,10.420195586809644,1,0.2605048896702411,0.0,0.0\n2025-06-22 07:00:00,baseline,Rule-based merit-order baseline,14.8570902325125,29.930397135950727,0.0,0.0,12.999999999999996,15.073306903438228,1,0.3768326725859557,0.0,0.0\n2025-06-22 08:00:00,baseline,Rule-based merit-order baseline,26.373536896049995,21.63923737258557,4.734299523464426,0.0,17.540980579087012,0.0,0,,0.0,0.0\n2025-06-22 09:00:00,baseline,Rule-based merit-order baseline,41.050809828000006,13.552339980855812,27.498469847144193,0.0,43.9165862862467,0.0,0,,0.0,0.0\n2025-06-22 10:00:00,baseline,Rule-based merit-order baseline,47.23412559444,12.860896759613956,34.373228834826044,0.0,76.8862291670668,0.0,0,,0.0,0.0\n2025-06-22 11:00:00,baseline,Rule-based merit-order baseline,55.7307445266,14.331699071797026,41.39904545480297,0.0,116.59479861250685,0.0,0,,0.0,0.0\n2025-06-22 12:00:00,baseline,Rule-based merit-order baseline,52.2387014734125,13.392828877588926,13.975888563151099,0.0,130.0,0.0,0,,0.0,24.869984032672473\n2025-06-22 13:00:00,baseline,Rule-based merit-order baseline,50.4705426920325,13.604513831602665,0.0,0.0,130.0,0.0,0,,0.0,36.866028860429836\n2025-06-22 14:00:00,baseline,Rule-based merit-order baseline,46.3966760466,13.666107259937483,0.0,0.0,130.0,0.0,0,,0.0,32.730568786662516\n2025-06-22 15:00:00,baseline,Rule-based merit-order baseline,36.56072839680001,14.16762453902819,0.0,0.0,130.0,0.0,0,,0.0,22.39310385777182\n2025-06-22 16:00:00,baseline,Rule-based merit-order baseline,22.66453078848,14.801896120223322,0.0,0.0,130.0,0.0,0,,0.0,7.862634668256678\n2025-06-22 17:00:00,baseline,Rule-based merit-order baseline,8.2507134887325,13.141650178875786,0.0,4.890936690143285,124.90084600932262,0.0,0,,0.0,0.0\n2025-06-22 18:00:00,baseline,Rule-based merit-order baseline,0.32594861376,23.644622523384477,0.0,23.318673909624476,100.5894478750559,0.0,0,,0.0,0.0\n2025-06-22 19:00:00,baseline,Rule-based merit-order baseline,0.0,25.57784315635612,0.0,25.57784315635612,73.92270298209911,0.0,0,,0.0,0.0\n2025-06-22 20:00:00,baseline,Rule-based merit-order baseline,0.0,20.23391342678669,0.0,20.23391342678669,52.827389970759086,0.0,0,,0.0,0.0\n2025-06-22 21:00:00,baseline,Rule-based merit-order baseline,0.0,18.18121926711712,0.0,18.18121926711712,33.872158559128465,0.0,0,,0.0,0.0\n2025-06-22 22:00:00,baseline,Rule-based merit-order baseline,0.0,11.900428316640824,0.0,11.900428316640824,21.465104371765555,0.0,0,,0.0,0.0\n2025-06-22 23:00:00,baseline,Rule-based merit-order baseline,0.0,4.980726940966605,0.0,4.980726940966605,16.272337573395866,0.0,0,,0.0,0.0\n2025-06-16 00:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",0.0,3.5764000730074432,13.480804018333755,0.0,71.5,17.057204091341198,1,0.42643010228352995,0.0,0.0\n2025-06-16 01:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",0.0,3.243779938188075,0.0,3.243779938188075,68.1181256342931,0.0,0,,0.0,0.0\n2025-06-16 02:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",0.0,3.6553665776400703,0.0,3.6553665776400703,64.30714253379092,0.0,0,,0.0,0.0\n2025-06-16 03:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",0.0,3.45948623127386,0.0,3.45948623127386,60.70037881152799,0.0,0,,0.0,0.0\n2025-06-16 04:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",0.0,3.3832988985953407,0.0,3.3832988985953407,57.17304587442522,0.0,0,,0.0,0.0\n2025-06-16 05:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",0.0,3.607291955573881,0.0,3.607291955573881,53.412184032178786,0.0,0,,0.0,0.0\n2025-06-16 06:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",6.91629445917,14.281249499229617,0.0,7.364955040059616,45.733687608505136,0.0,0,,0.0,0.0\n2025-06-16 07:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",19.907448320812502,25.525693425972392,0.0,5.61824510515989,39.87626217784792,0.0,0,,0.0,0.0\n2025-06-16 08:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",32.9067984757725,20.14874567532413,12.758052800448368,0.0,52.1133565371436,0.0,0,,0.0,0.0\n2025-06-16 09:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",43.72999287120001,13.911982480308469,29.818010390891544,0.0,80.71378737616439,0.0,0,,0.0,0.0\n2025-06-16 10:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",46.12500667125,14.314391283482154,31.810615387767847,0.0,111.22545778669114,0.0,0,,0.0,0.0\n2025-06-16 11:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",43.66511858189249,13.42177815933527,19.573813343989563,0.0,130.0,0.0,0,,0.0,10.669527078567661\n2025-06-16 12:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",7.59863081565,14.738802990649564,0.0,7.140172174999564,122.55585591331669,0.0,0,,0.0,0.0\n2025-06-16 13:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",7.294074509250001,14.349594401889014,0.0,7.055519892639014,115.19996793190839,0.0,0,,0.0,0.0\n2025-06-16 14:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",6.27958472157,14.568042747733507,0.0,8.288458026163507,106.55865308809769,0.0,0,,0.0,0.0\n2025-06-16 15:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",9.73392761925,12.610230871047175,0.0,2.876303251797175,103.55989965210296,0.0,0,,0.0,0.0\n2025-06-16 16:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",12.1344700848525,13.90990583771082,0.0,1.7754357528583196,101.70887992358679,0.0,0,,0.0,0.0\n2025-06-16 17:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",4.884811886812501,13.09647967453843,0.0,8.21166778772593,93.14762443764165,0.0,0,,0.0,0.0\n2025-06-16 18:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",0.2447666398125,24.870251164537315,0.0,24.625484524724815,67.47378205491887,0.0,0,,0.0,0.0\n2025-06-16 19:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",0.0,22.98246979523368,0.0,22.98246979523368,43.51290094023102,0.0,0,,0.0,0.0\n2025-06-16 20:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",0.0,22.92609318949846,0.0,22.92609318949846,19.610796500100204,0.0,0,,0.0,0.0\n2025-06-16 21:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",0.0,16.718648581157115,11.281351418842885,0.0,30.43148865211128,28.0,1,0.7,0.0,0.0\n2025-06-16 22:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",0.0,11.857623107401684,16.142376892598314,0.0,45.91471264465484,28.0,1,0.7,0.0,0.0\n2025-06-16 23:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",0.0,4.947500240461286,23.052499759538712,0.0,68.02589365224577,28.0,1,0.7,0.0,0.0\n2025-06-17 00:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",0.0,3.1619629950306067,3.622006247369686,0.0,71.5,6.783969242400293,1,0.16959923106000732,0.0,0.0\n2025-06-17 01:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",0.0,3.132430891595057,0.0,3.132430891595057,68.23421504032387,0.0,0,,0.0,0.0\n2025-06-17 02:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",0.0,3.2854970821971072,0.0,3.2854970821971072,64.80884754542109,0.0,0,,0.0,0.0\n2025-06-17 03:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",0.0,3.9277178758946176,0.0,3.9277178758946176,60.71391858805276,0.0,0,,0.0,0.0\n2025-06-17 04:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",0.0,3.40552550413101,0.0,3.40552550413101,57.163412812801255,0.0,0,,0.0,0.0\n2025-06-17 05:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",0.0,3.017124559384275,0.0,3.017124559384275,54.017843014615146,0.0,0,,0.0,0.0\n2025-06-17 06:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",6.119633235892499,14.905157466097553,0.0,8.785524230205054,44.85830082938795,0.0,0,,0.0,0.0\n2025-06-17 07:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",17.161932573,25.34250971852109,0.0,8.180577145521088,36.329459578652816,0.0,0,,0.0,0.0\n2025-06-17 08:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",29.004510338212494,20.64738743290528,8.357122905307214,0.0,44.34533027334704,0.0,0,,0.0,0.0\n2025-06-17 09:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",38.37292864892999,13.281988593824837,25.090940055105158,0.0,68.41171452651166,0.0,0,,0.0,0.0\n2025-06-17 10:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",42.26149186535249,13.918987681630895,28.342504183721594,0.0,95.5968895292946,0.0,0,,0.0,0.0\n2025-06-17 11:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",42.0125752919925,13.22071083328942,28.791864458703078,0.0,123.21307576649366,0.0,0,,0.0,0.0\n2025-06-17 12:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",44.50076987328,13.001138762758348,7.075857648996679,0.0,130.0,0.0,0,,0.0,24.423773461524974\n2025-06-17 13:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",40.38399498501,13.281159008385778,0.0,0.0,130.0,0.0,0,,0.0,27.10283597662422\n2025-06-17 14:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",34.5636571175325,15.631123370740672,0.0,0.0,130.0,0.0,0,,0.0,18.932533746791826\n2025-06-17 15:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",29.472094729012493,15.381549570120448,0.0,0.0,130.0,0.0,0,,0.0,14.090545158892045\n2025-06-17 16:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",18.6522856789725,15.471421741737831,0.0,0.0,130.0,0.0,0,,0.0,3.180863937234669\n2025-06-17 17:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",6.89687931933,13.366988063482356,0.0,6.470108744152356,123.25444533163758,0.0,0,,0.0,0.0\n2025-06-17 18:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",0.28080632925,20.782073814602384,0.0,20.501267485352383,101.88039644595953,0.0,0,,0.0,0.0\n2025-06-17 19:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",0.0,25.79555669205609,0.0,25.79555669205609,74.98666950135889,0.0,0,,0.0,0.0\n2025-06-17 20:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",0.0,22.401878278669848,0.0,22.401878278669848,51.63109688608512,0.0,0,,0.0,0.0\n2025-06-17 21:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",0.0,17.075310809863495,0.0,17.075310809863495,33.82885474427951,0.0,0,,0.0,0.0\n2025-06-17 22:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",0.0,12.155623251782735,0.0,12.155623251782735,21.155741445059355,0.0,0,,0.0,0.0\n2025-06-17 23:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",0.0,5.580934757583298,0.0,5.580934757583298,15.337214740718135,0.0,0,,0.0,0.0\n2025-06-18 00:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",0.0,3.5069151859919288,24.49308481400807,0.0,38.83015639155653,28.0,1,0.7,0.0,0.0\n2025-06-18 01:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",0.0,3.105526817563842,24.89447318243616,0.0,62.70809624047462,28.0,1,0.7,0.0,0.0\n2025-06-18 02:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",0.0,3.400123971103157,9.166193304318139,0.0,71.5,12.566317275421294,1,0.31415793188553237,0.0,0.0\n2025-06-18 03:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",0.0,3.135368050179389,0.0,3.135368050179389,68.23115284081786,0.0,0,,0.0,0.0\n2025-06-18 04:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",0.0,3.414526842040326,0.0,3.414526842040326,64.6712625220669,0.0,0,,0.0,0.0\n2025-06-18 05:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",0.0,2.9402924454885886,0.0,2.9402924454885886,61.60579573992941,0.0,0,,0.0,0.0\n2025-06-18 06:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",6.761752745872499,13.96418055226288,0.0,7.20242780639038,54.09674567074005,0.0,0,,0.0,0.0\n2025-06-18 07:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",20.05532034453,28.25372874995809,0.0,8.19840840542809,45.549314046447876,0.0,0,,0.0,0.0\n2025-06-18 08:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",34.5893184838125,22.815618609998428,11.77369987381407,0.0,56.842250246619976,0.0,0,,0.0,0.0\n2025-06-18 09:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",45.6629931648,13.884610997055606,31.778382167744393,0.0,87.32300363860945,0.0,0,,0.0,0.0\n2025-06-18 10:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",53.4563724763125,13.051858039450964,40.40451443686154,0.0,126.07765244269834,0.0,0,,0.0,0.0\n2025-06-18 11:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",56.38310900244,12.379111770591887,4.089330013194774,0.0,130.0,0.0,0,,0.0,39.91466721865334\n2025-06-18 12:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",57.05391201587999,12.452820504953024,0.0,0.0,130.0,0.0,0,,0.0,44.60109151092696\n2025-06-18 13:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",53.13629077965,14.202489496737403,0.0,0.0,130.0,0.0,0,,0.0,38.9338012829126\n2025-06-18 14:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",44.8252745968125,12.727727128599874,0.0,0.0,130.0,0.0,0,,0.0,32.097547468212625\n2025-06-18 15:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",34.8106574304,14.116716128191406,0.0,0.0,130.0,0.0,0,,0.0,20.693941302208593\n2025-06-18 16:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",20.82016894005,15.121027215579346,0.0,0.0,130.0,0.0,0,,0.0,5.699141724470653\n2025-06-18 17:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",7.47304872741,13.6656110132752,0.0,6.1925622858652,123.5438075172544,0.0,0,,0.0,0.0\n2025-06-18 18:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",0.2901465307125,23.092479396961885,0.0,22.802332866249383,99.77073213355256,0.0,0,,0.0,0.0\n2025-06-18 19:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",0.0,24.608530433954385,0.0,24.608530433954385,74.11456561234411,0.0,0,,0.0,0.0\n2025-06-18 20:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",0.0,20.786080645492063,0.0,20.786080645492063,52.44357848065471,0.0,0,,0.0,0.0\n2025-06-18 21:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",0.0,16.51975271251125,0.0,16.51975271251125,35.22054569456944,0.0,0,,0.0,0.0\n2025-06-18 22:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",0.0,11.36152658006626,0.0,11.36152658006626,23.375335406387457,0.0,0,,0.0,0.0\n2025-06-18 23:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",0.0,4.617511066882274,0.0,4.617511066882274,18.56124733382238,0.0,0,,0.0,0.0\n2025-06-19 00:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",0.0,3.8288425439236,0.0,3.8288425439236,14.569403036007234,0.0,0,,0.0,0.0\n2025-06-19 01:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",0.0,2.506113086281799,25.4938869137182,0.0,39.0222803385231,28.0,1,0.7,0.0,0.0\n2025-06-19 02:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",0.0,3.4745680278340068,24.525431972165993,0.0,62.54624829351816,28.0,1,0.7,0.0,0.0\n2025-06-19 03:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",0.0,3.5337470842317886,9.334931453447972,0.0,71.5,12.86867853767976,1,0.32171696344199396,0.0,0.0\n2025-06-19 04:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",0.0,3.144915771809644,0.0,3.144915771809644,68.2211986529113,0.0,0,,0.0,0.0\n2025-06-19 05:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",0.0,3.137755005738845,0.0,3.137755005738845,64.94986292052985,0.0,0,,0.0,0.0\n2025-06-19 06:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",5.673665140312499,17.031472449769048,0.0,11.357807309456549,53.10853024000739,0.0,0,,0.0,0.0\n2025-06-19 07:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",15.82305882804,25.375993050262963,0.0,9.552934222222962,43.1489078306444,0.0,0,,0.0,0.0\n2025-06-19 08:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",26.40665651085,23.014024388921715,3.3926321219282833,0.0,46.40300624611379,0.0,0,,0.0,0.0\n2025-06-19 09:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",27.661284756,13.97906388519068,13.68222087080932,0.0,59.5265314783447,0.0,0,,0.0,0.0\n2025-06-19 10:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",33.49761633405,13.777029967892872,19.72058636615713,0.0,78.44185342895018,0.0,0,,0.0,0.0\n2025-06-19 11:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",45.077968491412506,12.647872923679325,32.43009556773318,0.0,109.54770835450597,0.0,0,,0.0,0.0\n2025-06-19 12:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",53.64967714677,14.737085310144074,21.322988042922965,0.0,130.0,0.0,0,,0.0,17.589603793702963\n2025-06-19 13:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",47.93747287365001,13.184496804871216,0.0,0.0,130.0,0.0,0,,0.0,34.75297606877879\n2025-06-19 14:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",42.73928853599249,13.697664549046063,0.0,0.0,130.0,0.0,0,,0.0,29.04162398694643\n2025-06-19 15:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",37.46356765892999,13.25196064193399,0.0,0.0,130.0,0.0,0,,0.0,24.211607016996\n2025-06-19 16:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",22.52338337061001,13.076004813231831,0.0,0.0,130.0,0.0,0,,0.0,9.447378557378178\n2025-06-19 17:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",8.190858773250001,16.23261505099057,0.0,8.04175627774057,121.61588950878561,0.0,0,,0.0,0.0\n2025-06-19 18:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",0.3066908194125,24.729052679687143,0.0,24.422361860274645,96.15381714286053,0.0,0,,0.0,0.0\n2025-06-19 19:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",0.0,21.577132437569897,0.0,21.577132437569897,73.65810150660158,0.0,0,,0.0,0.0\n2025-06-19 20:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",0.0,21.48246188484965,0.0,21.48246188484965,51.26108674448725,0.0,0,,0.0,0.0\n2025-06-19 21:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",0.0,17.12854366225441,0.0,17.12854366225441,33.403345517557256,0.0,0,,0.0,0.0\n2025-06-19 22:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",0.0,14.029175518543148,0.0,14.029175518543148,18.77691895279284,0.0,0,,0.0,0.0\n2025-06-19 23:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",0.0,4.688450964950514,0.0,4.688450964950514,13.888870923832926,0.0,0,,0.0,0.0\n2025-06-20 00:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",0.0,3.4011352095959944,24.598864790404004,0.0,37.483273163738296,28.0,1,0.7,0.0,0.0\n2025-06-20 01:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",0.0,3.658188333360689,24.341811666639313,0.0,60.83111870882033,28.0,1,0.7,0.0,0.0\n2025-06-20 02:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",0.0,3.214577874143055,11.123077655374084,0.0,71.5,14.33765552951714,1,0.3584413882379285,0.0,0.0\n2025-06-20 03:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",0.0,3.3799396241412163,0.0,3.3799396241412163,67.97616934861952,0.0,0,,0.0,0.0\n2025-06-20 04:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",0.0,3.691486137042152,0.0,3.691486137042152,64.12752900429373,0.0,0,,0.0,0.0\n2025-06-20 05:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",0.0,3.077275294767841,0.0,3.077275294767841,60.91924772938959,0.0,0,,0.0,0.0\n2025-06-20 06:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",6.426362872372499,15.941375050337989,0.0,9.51501217796549,50.99916178421756,0.0,0,,0.0,0.0\n2025-06-20 07:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",19.1184602994,23.88813166968547,0.0,4.769671370285472,46.02643562911816,0.0,0,,0.0,0.0\n2025-06-20 08:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",32.543761175212495,20.04332867734524,12.500432497867255,0.0,58.01642927478107,0.0,0,,0.0,0.0\n2025-06-20 09:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",41.53142235611251,13.099505145519029,28.43191721059348,0.0,85.2873662401374,0.0,0,,0.0,0.0\n2025-06-20 10:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",51.2769120763725,13.047458274155726,38.22945380221677,0.0,121.9557701728771,0.0,0,,0.0,0.0\n2025-06-20 11:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",54.601018003372495,11.476375699781425,8.386689344714881,0.0,130.0,0.0,0,,0.0,34.73795295887619\n2025-06-20 12:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",48.93116286645,12.206413224651705,0.0,0.0,130.0,0.0,0,,0.0,36.7247496417983\n2025-06-20 13:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",42.8829198408,12.876565012054224,0.0,0.0,130.0,0.0,0,,0.0,30.006354828745778\n2025-06-20 14:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",39.578237497012495,10.751257660772112,0.0,0.0,130.0,0.0,0,,0.0,28.826979836240383\n2025-06-20 15:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",32.7538688467725,13.972625074803664,0.0,0.0,130.0,0.0,0,,0.0,18.781243771968832\n2025-06-20 16:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",21.318252955650003,14.18321651458214,0.0,0.0,130.0,0.0,0,,0.0,7.135036441067863\n2025-06-20 17:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",7.8364799891325,12.998634994706528,0.0,5.162155005574028,124.61808136870468,0.0,0,,0.0,0.0\n2025-06-20 18:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",0.300813552,19.512014640685216,0.0,19.211201088685215,104.58901967700551,0.0,0,,0.0,0.0\n2025-06-20 19:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",0.0,22.17344839598202,0.0,22.17344839598202,81.47160167744063,0.0,0,,0.0,0.0\n2025-06-20 20:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",0.0,21.23097571998404,0.0,21.23097571998404,59.33677936687836,0.0,0,,0.0,0.0\n2025-06-20 21:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",0.0,17.288954424015444,0.0,17.288954424015444,41.311798359963106,0.0,0,,0.0,0.0\n2025-06-20 22:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",0.0,14.187403926144158,0.0,14.187403926144158,26.52040727670815,0.0,0,,0.0,0.0\n2025-06-20 23:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",0.0,5.87092404192234,0.0,5.87092404192234,20.399545843833,0.0,0,,0.0,0.0\n2025-06-21 00:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",0.0,3.46030166083322,0.0,3.46030166083322,16.791931977486193,0.0,0,,0.0,0.0\n2025-06-21 01:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",0.0,3.724869255889383,24.275130744110616,0.0,40.07581942851488,28.0,1,0.7,0.0,0.0\n2025-06-21 02:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",0.0,2.770386659538392,25.229613340461608,0.0,64.27521442435027,28.0,1,0.7,0.0,0.0\n2025-06-21 03:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",0.0,3.928679954650444,7.532359654973047,0.0,71.5,11.46103960962349,1,0.2865259902405873,0.0,0.0\n2025-06-21 04:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",0.0,3.3943106041303808,0.0,3.3943106041303808,67.9611865662602,0.0,0,,0.0,0.0\n2025-06-21 05:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",0.0,3.5490013113312617,0.0,3.5490013113312617,64.26109692166006,0.0,0,,0.0,0.0\n2025-06-21 06:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",5.717527717409999,15.653844311032428,0.0,9.93631659362243,53.90177075963621,0.0,0,,0.0,0.0\n2025-06-21 07:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",16.49607450624,32.461804894885745,0.0,15.965730388645746,37.25634617472771,0.0,0,,0.0,0.0\n2025-06-21 08:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",30.4826090437125,22.667067558398813,7.8155414853136875,0.0,44.75275022013285,0.0,0,,0.0,0.0\n2025-06-21 09:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",39.2646509568,13.927538358876058,25.33711259792394,0.0,69.05525488150235,0.0,0,,0.0,0.0\n2025-06-21 10:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",53.21648092581001,15.050030072085832,38.16645085372418,0.0,105.66322850895357,0.0,0,,0.0,0.0\n2025-06-21 11:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",56.275474858672496,13.8166300363517,25.372838237482345,0.0,130.0,0.0,0,,0.0,17.086006584838454\n2025-06-21 12:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",59.37311033325,13.165291162653226,0.0,0.0,130.0,0.0,0,,0.0,46.20781917059677\n2025-06-21 13:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",55.72371262437001,11.543926935858211,0.0,0.0,130.0,0.0,0,,0.0,44.1797856885118\n2025-06-21 14:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",47.5304820355125,13.48398391055075,0.0,0.0,130.0,0.0,0,,0.0,34.04649812496175\n2025-06-21 15:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",31.7898985896,14.195529616153731,0.0,0.0,130.0,0.0,0,,0.0,17.59436897344627\n2025-06-21 16:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",14.548756869,13.920320840296275,0.0,0.0,130.0,0.0,0,,0.0,0.6284360287037245\n2025-06-21 17:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",5.1288202098,11.523447652387835,0.0,6.3946274425878356,123.33314002847753,0.0,0,,0.0,0.0\n2025-06-21 18:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",0.1938254815124999,21.107160911837006,0.0,20.913335430324505,101.52948061231166,0.0,0,,0.0,0.0\n2025-06-21 19:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",0.0,24.85153862595909,0.0,24.85153862595909,75.61996053726855,0.0,0,,0.0,0.0\n2025-06-21 20:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",0.0,22.883214110571075,0.0,22.883214110571075,51.76256062722699,0.0,0,,0.0,0.0\n2025-06-21 21:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",0.0,19.098178044757425,0.0,19.098178044757425,31.85133360442557,0.0,0,,0.0,0.0\n2025-06-21 22:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",0.0,11.88870766404164,0.0,11.88870766404164,19.456499042108085,0.0,0,,0.0,0.0\n2025-06-21 23:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",0.0,5.6358928237422425,0.0,5.6358928237422425,13.580674592952654,0.0,0,,0.0,0.0\n2025-06-22 00:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",0.0,3.4143638595450394,24.58563614045496,0.0,37.16238835757073,28.0,1,0.7,0.0,0.0\n2025-06-22 01:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",0.0,3.656802005861501,24.3431979941385,0.0,60.511563621277205,28.0,1,0.7,0.0,0.0\n2025-06-22 02:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",0.0,3.742411125132509,11.45623686456414,0.0,71.5,15.19864798969665,1,0.37996619974241624,0.0,0.0\n2025-06-22 03:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",0.0,3.0550123640578866,0.0,3.0550123640578866,68.31492943485675,0.0,0,,0.0,0.0\n2025-06-22 04:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",0.0,3.499592089225718,0.0,3.499592089225718,64.66635246523838,0.0,0,,0.0,0.0\n2025-06-22 05:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",0.0,3.7329708524705194,0.0,3.7329708524705194,60.77446131526323,0.0,0,,0.0,0.0\n2025-06-22 06:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",5.083987830052501,15.504183416862144,0.0,10.420195586809644,49.91065642954459,0.0,0,,0.0,0.0\n2025-06-22 07:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",14.8570902325125,29.930397135950727,0.0,15.073306903438228,34.19564764518017,0.0,0,,0.0,0.0\n2025-06-22 08:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",26.373536896049995,21.63923737258557,4.734299523464426,0.0,38.73662822426719,0.0,0,,0.0,0.0\n2025-06-22 09:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",41.050809828000006,13.552339980855812,27.498469847144193,0.0,65.11223393142689,0.0,0,,0.0,0.0\n2025-06-22 10:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",47.23412559444,12.860896759613956,34.373228834826044,0.0,98.08187681224697,0.0,0,,0.0,0.0\n2025-06-22 11:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",55.7307445266,14.331699071797026,33.27694377147927,0.0,130.0,0.0,0,,0.0,8.122101683323706\n2025-06-22 12:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",52.2387014734125,13.392828877588926,0.0,0.0,130.0,0.0,0,,0.0,38.84587259582357\n2025-06-22 13:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",50.4705426920325,13.604513831602665,0.0,0.0,130.0,0.0,0,,0.0,36.866028860429836\n2025-06-22 14:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",46.3966760466,13.666107259937483,0.0,0.0,130.0,0.0,0,,0.0,32.730568786662516\n2025-06-22 15:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",36.56072839680001,14.16762453902819,0.0,0.0,130.0,0.0,0,,0.0,22.39310385777182\n2025-06-22 16:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",22.66453078848,14.801896120223322,0.0,0.0,130.0,0.0,0,,0.0,7.862634668256678\n2025-06-22 17:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",8.2507134887325,13.141650178875786,0.0,4.890936690143285,124.90084600932262,0.0,0,,0.0,0.0\n2025-06-22 18:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",0.32594861376,23.644622523384477,0.0,23.318673909624476,100.5894478750559,0.0,0,,0.0,0.0\n2025-06-22 19:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",0.0,25.57784315635612,0.0,25.57784315635612,73.92270298209911,0.0,0,,0.0,0.0\n2025-06-22 20:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",0.0,20.23391342678669,0.0,20.23391342678669,52.827389970759086,0.0,0,,0.0,0.0\n2025-06-22 21:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",0.0,18.18121926711712,0.0,18.18121926711712,33.872158559128465,0.0,0,,0.0,0.0\n2025-06-22 22:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",0.0,11.900428316640824,0.0,11.900428316640824,21.465104371765555,0.0,0,,0.0,0.0\n2025-06-22 23:00:00,heuristic,\"Reactive high-loading heuristic (70% target, bank to 50%)\",0.0,4.980726940966605,0.0,4.980726940966605,16.272337573395866,0.0,0,,0.0,0.0\n2025-06-16 00:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",0.0,3.5764000730074432,0.0,3.5764000730074432,48.72702854932086,0.0,0,,0.0,0.0\n2025-06-16 01:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",0.0,3.243779938188075,0.0,3.243779938188075,45.34515418361396,0.0,0,,0.0,0.0\n2025-06-16 02:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",0.0,3.6553665776400703,0.0,3.6553665776400703,41.53417108311179,0.0,0,,0.0,0.0\n2025-06-16 03:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",0.0,3.45948623127386,0.0,3.45948623127386,37.927407360848854,0.0,0,,0.0,0.0\n2025-06-16 04:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",0.0,3.3832988985953407,0.0,3.3832988985953407,34.400074423746084,0.0,0,,0.0,0.0\n2025-06-16 05:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",0.0,3.607291955573881,0.0,3.607291955573881,30.63921258149965,0.0,0,,0.0,0.0\n2025-06-16 06:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",6.91629445917,14.281249499229617,0.0,7.364955040059616,22.960716157826,0.0,0,,0.0,0.0\n2025-06-16 07:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",19.907448320812502,25.525693425972392,0.0,5.61824510515989,17.103290727168783,0.0,0,,0.0,0.0\n2025-06-16 08:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",32.9067984757725,20.14874567532413,12.758052800448368,0.0,29.340385086464465,0.0,0,,0.0,0.0\n2025-06-16 09:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",43.72999287120001,13.911982480308469,29.818010390891544,0.0,57.940815925485246,8.881784197001252e-16,0,,0.0,0.0\n2025-06-16 10:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",46.12500667125,14.314391283482154,31.810615387767847,0.0,88.45248633601199,0.0,0,,0.0,0.0\n2025-06-16 11:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",43.66511858189249,13.42177815933527,30.243340422557225,0.0,117.46087940976754,0.0,0,,0.0,0.0\n2025-06-16 12:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",7.59863081565,14.738802990649564,1.7763568394002505e-15,7.140172174999564,110.01673532308423,1.7763568394002505e-15,0,,0.0,0.0\n2025-06-16 13:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",7.294074509250001,14.349594401889014,0.0,7.055519892639014,102.66084734167595,0.0,0,,0.0,0.0\n2025-06-16 14:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",6.27958472157,14.568042747733507,0.0,8.288458026163507,94.01953249786524,0.0,0,,0.0,0.0\n2025-06-16 15:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",9.73392761925,12.610230871047175,1.7763568394002505e-15,2.876303251797175,91.02077906187051,1.7763568394002505e-15,0,,0.0,0.0\n2025-06-16 16:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",12.1344700848525,13.90990583771082,1.7763568394002505e-15,1.7754357528583196,89.16975933335435,1.7763568394002505e-15,0,,0.0,0.0\n2025-06-16 17:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",4.884811886812501,13.09647967453843,0.0,8.21166778772593,80.60850384740921,0.0,0,,0.0,0.0\n2025-06-16 18:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",0.2447666398125,24.870251164537315,0.0,0.0,80.60850384740921,24.625484524724815,1,0.6156371131181204,0.0,0.0\n2025-06-16 19:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",0.0,22.98246979523368,0.45123499976632075,0.0,81.04131325466948,23.433704795,1,0.585842619875,0.0,0.0\n2025-06-16 20:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",0.0,22.92609318949846,8.62776622755819,0.0,89.31677590464876,31.55385941705665,1,0.7888464854264162,0.0,0.0\n2025-06-16 21:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",0.0,16.718648581157115,0.0,0.0,89.31677590464876,16.718648581157115,1,0.4179662145289279,0.0,0.0\n2025-06-16 22:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",0.0,11.857623107401684,0.0,11.857623107401684,76.95434923290131,0.0,0,,0.0,0.0\n2025-06-16 23:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",0.0,4.947500240461286,0.0,4.947500240461286,71.7962236644662,0.0,0,,0.0,0.0\n2025-06-17 00:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",0.0,3.1619629950306067,0.0,3.1619629950306067,68.49964935857139,0.0,0,,0.0,0.0\n2025-06-17 01:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",0.0,3.132430891595057,0.0,3.132430891595057,65.23386439889526,0.0,0,,0.0,0.0\n2025-06-17 02:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",0.0,3.2854970821971072,0.0,3.2854970821971072,61.80849690399247,0.0,0,,0.0,0.0\n2025-06-17 03:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",0.0,3.9277178758946176,0.0,3.9277178758946176,57.713567946624146,0.0,0,,0.0,0.0\n2025-06-17 04:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",0.0,3.40552550413101,0.0,3.40552550413101,54.16306217137264,0.0,0,,0.0,0.0\n2025-06-17 05:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",0.0,3.017124559384275,0.0,3.017124559384275,51.01749237318653,0.0,0,,0.0,0.0\n2025-06-17 06:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",6.119633235892499,14.905157466097553,0.0,8.785524230205054,41.85795018795933,0.0,0,,0.0,0.0\n2025-06-17 07:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",17.161932573,25.34250971852109,0.0,8.180577145521088,33.3291089372242,0.0,0,,0.0,0.0\n2025-06-17 08:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",29.004510338212494,20.64738743290528,8.357122905307214,0.0,41.34497963191842,0.0,0,,0.0,0.0\n2025-06-17 09:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",38.37292864892999,13.281988593824837,25.090940055105158,0.0,65.41136388508303,0.0,0,,0.0,0.0\n2025-06-17 10:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",42.26149186535249,13.918987681630895,28.342504183721594,0.0,92.59653888786596,0.0,0,,0.0,0.0\n2025-06-17 11:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",42.0125752919925,13.22071083328942,28.791864458703078,0.0,120.21272512506502,0.0,0,,0.0,0.0\n2025-06-17 12:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",44.50076987328,13.001138762758348,10.203939428812985,0.0,130.0,0.0,0,,0.0,21.295691681708668\n2025-06-17 13:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",40.38399498501,13.281159008385778,0.0,0.0,130.0,0.0,0,,0.0,27.10283597662422\n2025-06-17 14:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",34.5636571175325,15.631123370740672,0.0,0.0,130.0,0.0,0,,0.0,18.932533746791826\n2025-06-17 15:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",29.472094729012493,15.381549570120448,0.0,0.0,130.0,0.0,0,,0.0,14.090545158892045\n2025-06-17 16:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",18.6522856789725,15.471421741737831,0.0,0.0,130.0,0.0,0,,0.0,3.180863937234669\n2025-06-17 17:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",6.89687931933,13.366988063482356,0.0,6.470108744152356,123.25444533163758,0.0,0,,0.0,0.0\n2025-06-17 18:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",0.28080632925,20.782073814602384,0.0,20.501267485352383,101.88039644595953,0.0,0,,0.0,0.0\n2025-06-17 19:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",0.0,25.79555669205609,0.0,25.79555669205609,74.98666950135889,0.0,0,,0.0,0.0\n2025-06-17 20:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",0.0,22.401878278669848,0.0,0.0,74.98666950135889,22.401878278669848,1,0.5600469569667462,0.0,0.0\n2025-06-17 21:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",0.0,17.075310809863495,0.0,0.0,74.98666950135889,17.075310809863495,1,0.4268827702465874,0.0,0.0\n2025-06-17 22:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",0.0,12.155623251782735,0.0,12.155623251782735,62.313556202138734,0.0,0,,0.0,0.0\n2025-06-17 23:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",0.0,5.580934757583298,0.0,5.580934757583298,56.49502949779752,0.0,0,,0.0,0.0\n2025-06-18 00:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",0.0,3.5069151859919288,0.0,3.5069151859919288,52.8388176720227,0.0,0,,0.0,0.0\n2025-06-18 01:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",0.0,3.105526817563842,0.0,3.105526817563842,49.60108214850842,0.0,0,,0.0,0.0\n2025-06-18 02:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",0.0,3.400123971103157,0.0,3.400123971103157,46.05620786072847,0.0,0,,0.0,0.0\n2025-06-18 03:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",0.0,3.135368050179389,0.0,3.135368050179389,42.787360701546326,0.0,0,,0.0,0.0\n2025-06-18 04:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",0.0,3.414526842040326,0.0,3.414526842040326,39.22747038279537,0.0,0,,0.0,0.0\n2025-06-18 05:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",0.0,2.9402924454885886,0.0,2.9402924454885886,36.16200360065788,0.0,0,,0.0,0.0\n2025-06-18 06:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",6.761752745872499,13.96418055226288,0.0,7.20242780639038,28.65295353146852,0.0,0,,0.0,0.0\n2025-06-18 07:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",20.05532034453,28.25372874995809,0.0,8.19840840542809,20.105521907176346,0.0,0,,0.0,0.0\n2025-06-18 08:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",34.5893184838125,22.815618609998428,11.77369987381407,0.0,31.398458107348446,0.0,0,,0.0,0.0\n2025-06-18 09:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",45.6629931648,13.884610997055606,31.778382167744393,0.0,61.87921149933791,0.0,0,,0.0,0.0\n2025-06-18 10:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",53.4563724763125,13.051858039450964,40.40451443686154,0.0,100.6338603034268,0.0,0,,0.0,0.0\n2025-06-18 11:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",56.38310900244,12.379111770591887,30.616317059745818,0.0,130.0,0.0,0,,0.0,13.3876801721023\n2025-06-18 12:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",57.05391201587999,12.452820504953024,0.0,0.0,130.0,0.0,0,,0.0,44.60109151092696\n2025-06-18 13:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",53.13629077965,14.202489496737403,0.0,0.0,130.0,0.0,0,,0.0,38.9338012829126\n2025-06-18 14:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",44.8252745968125,12.727727128599874,0.0,0.0,130.0,0.0,0,,0.0,32.097547468212625\n2025-06-18 15:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",34.8106574304,14.116716128191406,0.0,0.0,130.0,0.0,0,,0.0,20.693941302208593\n2025-06-18 16:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",20.82016894005,15.121027215579346,0.0,0.0,130.0,0.0,0,,0.0,5.699141724470653\n2025-06-18 17:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",7.47304872741,13.6656110132752,0.0,6.1925622858652,123.5438075172544,0.0,0,,0.0,0.0\n2025-06-18 18:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",0.2901465307125,23.092479396961885,0.0,22.802332866249383,99.77073213355256,0.0,0,,0.0,0.0\n2025-06-18 19:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",0.0,24.608530433954385,0.0,0.0,99.77073213355256,24.608530433954385,1,0.6152132608488596,0.0,0.0\n2025-06-18 20:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",0.0,20.786080645492063,0.0,0.0,99.77073213355256,20.786080645492063,1,0.5196520161373016,0.0,0.0\n2025-06-18 21:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",0.0,16.51975271251125,0.0,16.51975271251125,82.54769934746729,0.0,0,,0.0,0.0\n2025-06-18 22:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",0.0,11.36152658006626,0.0,11.36152658006626,70.7024890592853,0.0,0,,0.0,0.0\n2025-06-18 23:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",0.0,4.617511066882274,0.0,4.617511066882274,65.88840098672023,0.0,0,,0.0,0.0\n2025-06-19 00:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",0.0,3.8288425439236,0.0,3.8288425439236,61.896556688905086,0.0,0,,0.0,0.0\n2025-06-19 01:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",0.0,2.506113086281799,0.0,2.506113086281799,59.283753180171004,0.0,0,,0.0,0.0\n2025-06-19 02:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",0.0,3.4745680278340068,0.0,3.4745680278340068,55.661265598044736,0.0,0,,0.0,0.0\n2025-06-19 03:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",0.0,3.5337470842317886,0.0,3.5337470842317886,51.977079584572294,0.0,0,,0.0,0.0\n2025-06-19 04:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",0.0,3.144915771809644,0.0,3.144915771809644,48.69827823748359,0.0,0,,0.0,0.0\n2025-06-19 05:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",0.0,3.137755005738845,0.0,3.137755005738845,45.42694250510215,0.0,0,,0.0,0.0\n2025-06-19 06:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",5.673665140312499,17.031472449769048,0.0,11.357807309456549,33.585609824579684,0.0,0,,0.0,0.0\n2025-06-19 07:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",15.82305882804,25.375993050262963,0.0,9.552934222222962,23.62598741521669,0.0,0,,0.0,0.0\n2025-06-19 08:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",26.40665651085,23.014024388921715,3.3926321219282833,0.0,26.880085830686088,0.0,0,,0.0,0.0\n2025-06-19 09:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",27.661284756,13.97906388519068,13.68222087080932,0.0,40.003611062917,0.0,0,,0.0,0.0\n2025-06-19 10:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",33.49761633405,13.777029967892872,19.72058636615713,0.0,58.91893301352248,0.0,0,,0.0,0.0\n2025-06-19 11:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",45.077968491412506,12.647872923679325,32.43009556773318,0.0,90.02478793907827,0.0,0,,0.0,0.0\n2025-06-19 12:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",53.64967714677,14.737085310144074,38.91259183662593,0.0,127.34843485585662,0.0,0,,0.0,0.0\n2025-06-19 13:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",47.93747287365001,13.184496804871216,2.764447761826095,0.0,130.0,0.0,0,,0.0,31.9885283069527\n2025-06-19 14:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",42.73928853599249,13.697664549046063,0.0,0.0,130.0,0.0,0,,0.0,29.04162398694643\n2025-06-19 15:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",37.46356765892999,13.25196064193399,0.0,0.0,130.0,0.0,0,,0.0,24.211607016996\n2025-06-19 16:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",22.52338337061001,13.076004813231831,0.0,0.0,130.0,0.0,0,,0.0,9.447378557378178\n2025-06-19 17:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",8.190858773250001,16.23261505099057,0.0,8.04175627774057,121.61588950878561,0.0,0,,0.0,0.0\n2025-06-19 18:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",0.3066908194125,24.729052679687143,0.0,24.422361860274645,96.15381714286053,0.0,0,,0.0,0.0\n2025-06-19 19:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",0.0,21.577132437569897,0.0,0.0,96.15381714286053,21.577132437569897,1,0.5394283109392475,0.0,0.0\n2025-06-19 20:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",0.0,21.48246188484965,0.0,0.0,96.15381714286053,21.48246188484965,1,0.5370615471212412,0.0,0.0\n2025-06-19 21:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",0.0,17.12854366225441,0.0,17.12854366225441,78.29607591593054,0.0,0,,0.0,0.0\n2025-06-19 22:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",0.0,14.029175518543148,0.0,14.029175518543148,63.66964935116613,0.0,0,,0.0,0.0\n2025-06-19 23:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",0.0,4.688450964950514,0.0,4.688450964950514,58.781601322206214,0.0,0,,0.0,0.0\n2025-06-20 00:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",0.0,3.4011352095959944,0.0,3.4011352095959944,55.23567274541724,0.0,0,,0.0,0.0\n2025-06-20 01:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",0.0,3.658188333360689,0.0,3.658188333360689,51.421747761211584,0.0,0,,0.0,0.0\n2025-06-20 02:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",0.0,3.214577874143055,0.0,3.214577874143055,48.070318651872704,0.0,0,,0.0,0.0\n2025-06-20 03:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",0.0,3.3799396241412163,0.0,3.3799396241412163,44.546488000492225,0.0,0,,0.0,0.0\n2025-06-20 04:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",0.0,3.691486137042152,0.0,3.691486137042152,40.69784765616643,0.0,0,,0.0,0.0\n2025-06-20 05:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",0.0,3.077275294767841,0.0,3.077275294767841,37.489566381262286,0.0,0,,0.0,0.0\n2025-06-20 06:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",6.426362872372499,15.941375050337989,0.0,9.51501217796549,27.56948043609026,0.0,0,,0.0,0.0\n2025-06-20 07:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",19.1184602994,23.88813166968547,0.0,4.769671370285472,22.596754280990858,0.0,0,,0.0,0.0\n2025-06-20 08:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",32.543761175212495,20.04332867734524,12.500432497867255,0.0,34.586747926653764,0.0,0,,0.0,0.0\n2025-06-20 09:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",41.53142235611251,13.099505145519029,28.43191721059348,0.0,61.8576848920101,0.0,0,,0.0,0.0\n2025-06-20 10:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",51.2769120763725,13.047458274155726,38.22945380221677,0.0,98.52608882474979,0.0,0,,0.0,0.0\n2025-06-20 11:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",54.601018003372495,11.476375699781425,32.81382073395857,0.0,130.0,0.0,0,,0.0,10.310821569632502\n2025-06-20 12:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",48.93116286645,12.206413224651705,0.0,0.0,130.0,0.0,0,,0.0,36.7247496417983\n2025-06-20 13:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",42.8829198408,12.876565012054224,0.0,0.0,130.0,0.0,0,,0.0,30.006354828745778\n2025-06-20 14:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",39.578237497012495,10.751257660772112,0.0,0.0,130.0,0.0,0,,0.0,28.826979836240383\n2025-06-20 15:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",32.7538688467725,13.972625074803664,0.0,0.0,130.0,0.0,0,,0.0,18.781243771968832\n2025-06-20 16:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",21.318252955650003,14.18321651458214,0.0,0.0,130.0,0.0,0,,0.0,7.135036441067863\n2025-06-20 17:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",7.8364799891325,12.998634994706528,0.0,5.162155005574028,124.61808136870468,0.0,0,,0.0,0.0\n2025-06-20 18:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",0.300813552,19.512014640685216,0.0,19.211201088685215,104.58901967700551,0.0,0,,0.0,0.0\n2025-06-20 19:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",0.0,22.17344839598202,0.0,0.0,104.58901967700551,22.17344839598202,1,0.5543362098995506,0.0,0.0\n2025-06-20 20:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",0.0,21.23097571998404,0.0,0.0,104.58901967700551,21.23097571998404,1,0.530774392999601,0.0,0.0\n2025-06-20 21:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",0.0,17.288954424015444,0.0,17.288954424015444,86.56403867009026,0.0,0,,0.0,0.0\n2025-06-20 22:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",0.0,14.187403926144158,0.0,14.187403926144158,71.7726475868353,0.0,0,,0.0,0.0\n2025-06-20 23:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",0.0,5.87092404192234,0.0,5.87092404192234,65.65178615396016,0.0,0,,0.0,0.0\n2025-06-21 00:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",0.0,3.46030166083322,0.0,3.46030166083322,62.04417228761335,0.0,0,,0.0,0.0\n2025-06-21 01:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",0.0,3.724869255889383,0.0,3.724869255889383,58.160727635958416,0.0,0,,0.0,0.0\n2025-06-21 02:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",0.0,2.770386659538392,0.0,2.770386659538392,55.272399880832495,0.0,0,,0.0,0.0\n2025-06-21 03:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",0.0,3.928679954650444,0.0,3.928679954650444,51.17646788702393,0.0,0,,0.0,0.0\n2025-06-21 04:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",0.0,3.3943106041303808,0.0,3.3943106041303808,47.63765445328412,0.0,0,,0.0,0.0\n2025-06-21 05:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",0.0,3.5490013113312617,0.0,3.5490013113312617,43.93756480868398,0.0,0,,0.0,0.0\n2025-06-21 06:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",5.717527717409999,15.653844311032428,0.0,9.93631659362243,33.57823864666013,0.0,0,,0.0,0.0\n2025-06-21 07:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",16.49607450624,32.461804894885745,0.0,15.965730388645746,16.932814061751632,0.0,0,,0.0,0.0\n2025-06-21 08:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",30.4826090437125,22.667067558398813,7.8155414853136875,0.0,24.42921810715677,0.0,0,,0.0,0.0\n2025-06-21 09:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",39.2646509568,13.927538358876058,25.33711259792394,0.0,48.73172276852627,0.0,0,,0.0,0.0\n2025-06-21 10:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",53.21648092581001,15.050030072085832,38.16645085372418,0.0,85.33969639597748,0.0,0,,0.0,0.0\n2025-06-21 11:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",56.275474858672496,13.8166300363517,42.4588448223208,0.0,126.06478968444331,0.0,0,,0.0,0.0\n2025-06-21 12:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",59.37311033325,13.165291162653226,4.1027403656982955,0.0,130.0,0.0,0,,0.0,42.105078804898476\n2025-06-21 13:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",55.72371262437001,11.543926935858211,0.0,0.0,130.0,0.0,0,,0.0,44.1797856885118\n2025-06-21 14:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",47.5304820355125,13.48398391055075,0.0,0.0,130.0,0.0,0,,0.0,34.04649812496175\n2025-06-21 15:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",31.7898985896,14.195529616153731,0.0,0.0,130.0,0.0,0,,0.0,17.59436897344627\n2025-06-21 16:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",14.548756869,13.920320840296275,0.0,0.0,130.0,0.0,0,,0.0,0.6284360287037245\n2025-06-21 17:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",5.1288202098,11.523447652387835,0.0,6.3946274425878356,123.33314002847753,0.0,0,,0.0,0.0\n2025-06-21 18:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",0.1938254815124999,21.107160911837006,0.0,20.913335430324505,101.52948061231166,0.0,0,,0.0,0.0\n2025-06-21 19:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",0.0,24.85153862595909,1.0658141036401503e-14,24.85153862595909,75.61996053726857,1.0658141036401503e-14,0,,0.0,0.0\n2025-06-21 20:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",0.0,22.883214110571075,0.0,0.0,75.61996053726857,22.883214110571075,1,0.5720803527642768,0.0,0.0\n2025-06-21 21:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",0.0,19.098178044757425,0.0,0.0,75.61996053726857,19.098178044757425,1,0.47745445111893564,0.0,0.0\n2025-06-21 22:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",0.0,11.88870766404164,0.0,11.88870766404164,63.225125974951084,0.0,0,,0.0,0.0\n2025-06-21 23:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",0.0,5.6358928237422425,0.0,5.6358928237422425,57.34930152579565,0.0,0,,0.0,0.0\n2025-06-22 00:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",0.0,3.4143638595450394,0.0,3.4143638595450394,53.78958112804222,0.0,0,,0.0,0.0\n2025-06-22 01:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",0.0,3.656802005861501,0.0,3.656802005861501,49.97710149016749,0.0,0,,0.0,0.0\n2025-06-22 02:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",0.0,3.742411125132509,0.0,3.742411125132509,46.07536817557908,0.0,0,,0.0,0.0\n2025-06-22 03:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",0.0,3.0550123640578866,0.0,3.0550123640578866,42.89029761043584,0.0,0,,0.0,0.0\n2025-06-22 04:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",0.0,3.499592089225718,0.0,3.499592089225718,39.24172064081746,0.0,0,,0.0,0.0\n2025-06-22 05:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",0.0,3.7329708524705194,0.0,3.7329708524705194,35.34982949084232,0.0,0,,0.0,0.0\n2025-06-22 06:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",5.083987830052501,15.504183416862144,0.0,10.420195586809644,24.486024605123674,0.0,0,,0.0,0.0\n2025-06-22 07:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",14.8570902325125,29.930397135950727,0.0,11.017007775759533,12.999999999999998,4.056299127678695,0,,0.0,0.0\n2025-06-22 08:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",26.373536896049995,21.63923737258557,4.734299523464426,0.0,17.540980579087012,0.0,0,,0.0,0.0\n2025-06-22 09:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",41.050809828000006,13.552339980855812,27.498469847144193,0.0,43.9165862862467,0.0,0,,0.0,0.0\n2025-06-22 10:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",47.23412559444,12.860896759613956,34.373228834826044,0.0,76.8862291670668,0.0,0,,0.0,0.0\n2025-06-22 11:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",55.7307445266,14.331699071797026,41.39904545480297,0.0,116.59479861250685,0.0,0,,0.0,0.0\n2025-06-22 12:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",52.2387014734125,13.392828877588926,13.975888563151099,0.0,130.0,0.0,0,,0.0,24.869984032672473\n2025-06-22 13:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",50.4705426920325,13.604513831602665,0.0,0.0,130.0,0.0,0,,0.0,36.866028860429836\n2025-06-22 14:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",46.3966760466,13.666107259937483,0.0,0.0,130.0,0.0,0,,0.0,32.730568786662516\n2025-06-22 15:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",36.56072839680001,14.16762453902819,0.0,0.0,130.0,0.0,0,,0.0,22.39310385777182\n2025-06-22 16:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",22.66453078848,14.801896120223322,0.0,0.0,130.0,0.0,0,,0.0,7.862634668256678\n2025-06-22 17:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",8.2507134887325,13.141650178875786,0.0,4.890936690143285,124.90084600932262,0.0,0,,0.0,0.0\n2025-06-22 18:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",0.32594861376,23.644622523384477,0.0,23.318673909624476,100.5894478750559,0.0,0,,0.0,0.0\n2025-06-22 19:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",0.0,25.57784315635612,0.0,0.0,100.5894478750559,25.57784315635612,1,0.639446078908903,0.0,0.0\n2025-06-22 20:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",0.0,20.23391342678669,0.0,0.0,100.5894478750559,20.23391342678669,1,0.5058478356696672,0.0,0.0\n2025-06-22 21:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",0.0,18.18121926711712,0.0,18.18121926711712,81.63421646342528,0.0,0,,0.0,0.0\n2025-06-22 22:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",0.0,11.900428316640824,0.0,11.900428316640824,69.22716227606236,0.0,0,,0.0,0.0\n2025-06-22 23:00:00,roll24,\"Rolling MILP, 24 h horizon, 1 h re-plan, XGBoost forecasts\",0.0,4.980726940966605,0.0,4.980726940966605,64.03439547769267,0.0,0,,0.0,0.0\n";
+
+  if (typeof EMBEDDED_CSV === "string" && EMBEDDED_CSV.indexOf("datetime") === 0) {
+    try { loadFromCSV(EMBEDDED_CSV, "embedded week_trace.csv"); }
+    catch (e) {
+      $("#banner").className = "show";
+      $("#banner").textContent = String(e.message || e);
+    }
+  } else {
+    $("#foot").textContent = "Open a dispatch CSV (week_trace.csv or a full-year export) via Load CSV. File picker works from file://.";
+  }
+})();
+</script>
+</body>
+</html>

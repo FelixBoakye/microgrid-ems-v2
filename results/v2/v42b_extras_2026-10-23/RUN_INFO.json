@@ -1,0 +1,13 @@
+{
+  "git_commit": "0d210e6afdd72c272738cbcdbe4203e1f1dbc7ce",
+  "out": "<repo>\\results\\v2\\v42b_extras_2026-10-23",
+  "v42b_source": "<repo>\\results\\v2\\v42b_ucparity_2026-10-23",
+  "smoke": false,
+  "start_cost_ghs": 33.75,
+  "uc_parity": true,
+  "python": "3.12.10",
+  "direct_cache": {
+    "copied_from": "<repo>\\results\\v2\\v42b_ucparity_2026-10-23\\direct\\direct_pred_2025_seed42.npz",
+    "sha256": "161b0c124182d3e8f4859a041599dd9db710a50d5c35ea0cd8eb28799ccde885"
+  }
+}

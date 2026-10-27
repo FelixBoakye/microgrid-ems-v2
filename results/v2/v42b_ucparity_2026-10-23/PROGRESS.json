@@ -1,0 +1,243 @@
+{
+ "copy_inputs": {
+  "outputs": {
+   "<repo>\\results\\v2\\v42b_ucparity_2026-10-23\\PROVENANCE.json": "130f3d5479cf547b9fe522dbe73d50a7292b84b9c621ed537657936d4ef06dfa",
+   "<repo>\\results\\v2\\v42b_ucparity_2026-10-23\\direct\\direct_pred_2022_seed42.npz": "29ed20e68603a241efc02c83439c6ffebd6e1c42838a991af856f245e7e8a85c",
+   "<repo>\\results\\v2\\v42b_ucparity_2026-10-23\\direct\\direct_pred_2023_seed42.npz": "81d979363d4c532c3f8b4973a995c8328daca2bfa937d0a1c98f8de0ee5d6b73",
+   "<repo>\\results\\v2\\v42b_ucparity_2026-10-23\\direct\\direct_pred_2024_seed42.npz": "bb934de20d1bec7a047899b26141c8b697b2623f698e54aa2c02c1d743ab32dc",
+   "<repo>\\results\\v2\\v42b_ucparity_2026-10-23\\direct\\direct_pred_2025_seed42.npz": "161b0c124182d3e8f4859a041599dd9db710a50d5c35ea0cd8eb28799ccde885",
+   "<repo>\\results\\v2\\v42b_ucparity_2026-10-23\\mix12\\direct\\direct_pred_2025_seed42.npz": "cbed6e9ad11880def295475349fbde4a37b86e5dc9d55be27c691c22e096233d",
+   "<repo>\\results\\v2\\v42b_ucparity_2026-10-23\\sensitivity\\direct\\day_of_week__flat__no_weekend_effect__seed42.npz": "68a81697adaec67fbf3bc47e8763dd7e3f222f40c3253b46e6db98e668c3c546",
+   "<repo>\\results\\v2\\v42b_ucparity_2026-10-23\\sensitivity\\direct\\day_of_week__nominal_sat__85___sun__45_seed42.npz": "161b0c124182d3e8f4859a041599dd9db710a50d5c35ea0cd8eb28799ccde885",
+   "<repo>\\results\\v2\\v42b_ucparity_2026-10-23\\sensitivity\\direct\\day_of_week__strong_sat__70___sun__25_seed42.npz": "f61c7429e3fa72bb46a25714603e5dde889bc39192f30b07e522924057735d49",
+   "<repo>\\results\\v2\\v42b_ucparity_2026-10-23\\sensitivity\\direct\\nominal_seed0.npz": "499641bd413deaa273e506e8d329118fbab7c41f149a5413125ff83b81eeda92",
+   "<repo>\\results\\v2\\v42b_ucparity_2026-10-23\\sensitivity\\direct\\nominal_seed1.npz": "294d6791975d014c17d1c2b9363a60b0b90c3f71c09dcbe656c47f163e3369c7",
+   "<repo>\\results\\v2\\v42b_ucparity_2026-10-23\\sensitivity\\direct\\nominal_seed2.npz": "ab733fd0c60027e0195578cb8f67c2aa026d6f2f601ffe0d6c60be52012e1db8",
+   "<repo>\\results\\v2\\v42b_ucparity_2026-10-23\\sensitivity\\direct\\nominal_seed3.npz": "2273c4c256ec51c350f19f84f7ee37139082bdf92d0becd49681f9554effdcbc",
+   "<repo>\\results\\v2\\v42b_ucparity_2026-10-23\\sensitivity\\direct\\nominal_seed4.npz": "3e8e3de4bba76a4e156d980b91615cb0cb0b884936ccb451ba2a6bd37b648d63",
+   "<repo>\\results\\v2\\v42b_ucparity_2026-10-23\\sensitivity\\direct\\nominal_seed5.npz": "3811921d470da5a7482d182fe5400386cbd00ea9d6e6ab417ea58c31c962df43",
+   "<repo>\\results\\v2\\v42b_ucparity_2026-10-23\\sensitivity\\direct\\nominal_seed6.npz": "1035cbac1f2883624d72867970b1ddb94cdb9d8e3c06a8d7c0798ca46c312839",
+   "<repo>\\results\\v2\\v42b_ucparity_2026-10-23\\sensitivity\\direct\\nominal_seed7.npz": "1f27a7fdc01dc0409c79aef3627790c7625b235a1383c7d987ab50f7112fed90",
+   "<repo>\\results\\v2\\v42b_ucparity_2026-10-23\\sensitivity\\direct\\nominal_seed8.npz": "5ecefaebeab5a68e0c45191ba461c6ab67f2e8090b10ed013332a93bfb93a15b",
+   "<repo>\\results\\v2\\v42b_ucparity_2026-10-23\\sensitivity\\direct\\nominal_seed9.npz": "114935e0b90b55255dfc8eb94dc2564bfa91bba28175c7d03921dc132e5e4018",
+   "<repo>\\results\\v2\\v42b_ucparity_2026-10-23\\sensitivity\\direct\\phi___0_50_seed42.npz": "aa70b5d44309025a7c54cff20378f5d0e46ff6594a0e3b23d43234920924f8b9",
+   "<repo>\\results\\v2\\v42b_ucparity_2026-10-23\\sensitivity\\direct\\phi___0_70_seed42.npz": "161b0c124182d3e8f4859a041599dd9db710a50d5c35ea0cd8eb28799ccde885",
+   "<repo>\\results\\v2\\v42b_ucparity_2026-10-23\\sensitivity\\direct\\phi___0_85_seed42.npz": "e29fd66a502b857127682c1a86f5f359f450c68a8473f50cf3ccbd01be5033d0",
+   "<repo>\\results\\v2\\v42b_ucparity_2026-10-23\\sensitivity\\direct\\temp_response_beta___0_000_seed42.npz": "a6e7ce0ccd40fa390f7690bcb46aaa4d13638dd5ac956f36b8077144e391f7ef",
+   "<repo>\\results\\v2\\v42b_ucparity_2026-10-23\\sensitivity\\direct\\temp_response_beta___0_020_seed42.npz": "161b0c124182d3e8f4859a041599dd9db710a50d5c35ea0cd8eb28799ccde885",
+   "<repo>\\results\\v2\\v42b_ucparity_2026-10-23\\sensitivity\\direct\\temp_response_beta___0_040_seed42.npz": "6c93b7588ea94b6f3dff80f3f34049db6083f2a27753018ba6c74cad375a88f1",
+   "<repo>\\results\\v2\\v42b_ucparity_2026-10-23\\v1\\direct\\direct_pred_2025_seed42.npz": "1da1048ac5e0ddc26930f5b059d1773a101dd7886da8c456d6b09c6746c8e8eb"
+  },
+  "status": "done",
+  "t": "2026-10-23 02:31:33"
+ },
+ "gate": {
+  "outputs": {
+   "<repo>\\results\\v2\\v42b_ucparity_2026-10-23\\logs\\gate.log": "8fa18f863c5e6e37752b4e2cf9ad37b7c54f246d106ddfbdba53777b71d8b8b2"
+  },
+  "status": "done",
+  "t": "2026-10-23 02:31:32"
+ },
+ "sc/attribution_cs50p625": {
+  "outputs": {
+   "<repo>\\results\\v2\\v42b_ucparity_2026-10-23\\attribution_cs50p625.csv": "473f690bc1fbe02544397f92671d280b9a5031723f1c323b64c72c4f2bbac170"
+  },
+  "status": "done",
+  "t": "2026-10-23 21:27:03"
+ },
+ "sc/bootstrap": {
+  "outputs": {
+   "<repo>\\results\\v2\\v42b_ucparity_2026-10-23\\logs\\s_bootstrap.log": "ce8f89d2360fa1649bbb73871452ee954f7dab9a93d56fe18f2f410413352327"
+  },
+  "status": "done",
+  "t": "2026-10-23 07:56:03"
+ },
+ "sc/bootstrap_50": {
+  "outputs": {
+   "<repo>\\results\\v2\\v42b_ucparity_2026-10-23\\logs\\s_bootstrap_50.log": "eb48c616c01a77e39a1588bcf341a8e4350f8de8ae62a3517c90e42519ab1dfa"
+  },
+  "status": "done",
+  "t": "2026-10-23 07:56:07"
+ },
+ "sc/figures": {
+  "outputs": {
+   "<repo>\\results\\v2\\v42b_ucparity_2026-10-23\\figures\\fig1_genset_load_factor.png": "d69d20eac16309096a6d2fefeef49394d7d3f6ab5ce8df8729d304721c296385",
+   "<repo>\\results\\v2\\v42b_ucparity_2026-10-23\\figures\\fig2_cost_waterfall.png": "fcfbda1481823cadd1cf1ae468e4090ca100431a0be982ba41bc2516779dbe7d",
+   "<repo>\\results\\v2\\v42b_ucparity_2026-10-23\\figures\\fig3_replan_interval.png": "2c3605e8315633ce8139efd1de996bdd254207ce550500aa0ec491bfa643a247",
+   "<repo>\\results\\v2\\v42b_ucparity_2026-10-23\\figures\\fig3b_replan_interval_fullcost.png": "8fe466a60a375e46b5d43a7349a71c3024a23b69f5265144ff9e246c5f0fe64d",
+   "<repo>\\results\\v2\\v42b_ucparity_2026-10-23\\figures\\fig4_sizing_heatmap.png": "c019a38c39672ba2b6ddb67e6b72aa4a53cb1ab8bf5ee5c20881686803064f7d",
+   "<repo>\\results\\v2\\v42b_ucparity_2026-10-23\\figures\\fig5_representative_week.png": "781987be96c66aca6ec684803a8edbc70113fce34c4bad9f2f8ce6af50b58991",
+   "<repo>\\results\\v2\\v42b_ucparity_2026-10-23\\figures\\fig6_tornado.png": "769adf22dd4c08b5fa758b2590a00899e542625733bc44cb591214d3a25e9943"
+  },
+  "status": "done",
+  "t": "2026-10-23 21:27:07"
+ },
+ "sc/phase5": {
+  "outputs": {
+   "<repo>\\results\\v2\\v42b_ucparity_2026-10-23\\logs\\s_phase5.log": "91f6caf094779d8f752e4c990b03d08480e600e5b6eefa81b21c89587d60ca16"
+  },
+  "status": "done",
+  "t": "2026-10-23 09:12:23"
+ },
+ "sc/phase5_cs50p625": {
+  "outputs": {
+   "<repo>\\results\\v2\\v42b_ucparity_2026-10-23\\phase5_ladder_lv2_sourced_mean_cs50p625.csv": "71a95c0c7825fad4de9c625c2878beab6cc7b9ef5e85dbf3594bc3d4d123436a"
+  },
+  "status": "done",
+  "t": "2026-10-23 21:27:00"
+ },
+ "sc/phase5_cummins": {
+  "outputs": {
+   "<repo>\\results\\v2\\v42b_ucparity_2026-10-23\\logs\\s_phase5_cummins.log": "3ce331dbac0a9831d7e2e68fb09be3a61d6bc5b92b6a8358aa85c1c1fbcdeb1b"
+  },
+  "status": "done",
+  "t": "2026-10-23 09:53:23"
+ },
+ "sc/phase5_generac": {
+  "outputs": {
+   "<repo>\\results\\v2\\v42b_ucparity_2026-10-23\\logs\\s_phase5_generac.log": "ea5c3ede40f686b4dd26e1e9ed3fdd74cc45f49f1c31f72eb1a13999b892dfa6"
+  },
+  "status": "done",
+  "t": "2026-10-23 09:32:35"
+ },
+ "sc/phase5_kohler": {
+  "outputs": {
+   "<repo>\\results\\v2\\v42b_ucparity_2026-10-23\\logs\\s_phase5_kohler.log": "7736106706b071c15034d154ad91ad11d8d8b27af722f6077f557e98f9f00940"
+  },
+  "status": "done",
+  "t": "2026-10-23 10:17:32"
+ },
+ "sc/phase5_loadv1": {
+  "outputs": {
+   "<repo>\\results\\v2\\v42b_ucparity_2026-10-23\\logs\\s_phase5_loadv1.log": "f5cc28299b68d5a099ed77fd13911b7e75035e800bd1064d609b222fd5616edf"
+  },
+  "status": "done",
+  "t": "2026-10-23 15:54:11"
+ },
+ "sc/phase5_mix12": {
+  "outputs": {
+   "<repo>\\results\\v2\\v42b_ucparity_2026-10-23\\logs\\s_phase5_mix12.log": "0034842dd2d9aaa763fe96164081391e9b6bdb5582966e695bd3df2469a79829"
+  },
+  "status": "done",
+  "t": "2026-10-23 10:36:32"
+ },
+ "sc/replan": {
+  "outputs": {
+   "<repo>\\results\\v2\\v42b_ucparity_2026-10-23\\logs\\s_replan.log": "577ee417e67c3e849ae152bb9e24f4028661a30eb3d4188bb27660c16cca43d8"
+  },
+  "status": "done",
+  "t": "2026-10-23 07:58:17"
+ },
+ "sc/replan_corrected": {
+  "outputs": {
+   "<repo>\\results\\v2\\v42b_ucparity_2026-10-23\\logs\\s_replan_corrected.log": "7481362ca758fc9714b0fdc56793b36bda7cdafa2d480869897b662f1c081671"
+  },
+  "status": "done",
+  "t": "2026-10-23 08:36:38"
+ },
+ "sc/seasonal": {
+  "outputs": {
+   "<repo>\\results\\v2\\v42b_ucparity_2026-10-23\\logs\\s_seasonal.log": "b5ea354b70a488baaa71a53c4ed9bbe29165db2671dbfe9d7402c97868177d71"
+  },
+  "status": "done",
+  "t": "2026-10-23 05:16:31"
+ },
+ "sc/seasonal_50": {
+  "outputs": {
+   "<repo>\\results\\v2\\v42b_ucparity_2026-10-23\\logs\\s_seasonal_50.log": "8d7532c880d1124555070db0b1296fc748bbf26c5aba524d01a703c72ee0d1c1"
+  },
+  "status": "done",
+  "t": "2026-10-23 07:55:58"
+ },
+ "sc/seeds": {
+  "outputs": {
+   "<repo>\\results\\v2\\v42b_ucparity_2026-10-23\\logs\\s_seeds.log": "c8bfec1901525cde301d151f31c3d8e736fcb29ce05dd6de465a2438f10fb757"
+  },
+  "status": "done",
+  "t": "2026-10-23 20:53:51"
+ },
+ "sc/sens_demand": {
+  "outputs": {
+   "<repo>\\results\\v2\\v42b_ucparity_2026-10-23\\logs\\s_sens_demand.log": "b8f6da703f57f7d9a9eee15acbe7bd25cc4b0abb60a7667ff01cad9c233f81cf"
+  },
+  "status": "done",
+  "t": "2026-10-23 18:31:17"
+ },
+ "sc/sens_genset": {
+  "outputs": {
+   "<repo>\\results\\v2\\v42b_ucparity_2026-10-23\\logs\\s_sens_genset.log": "dc36d2dba96b4f1e6cf52be750f2c0efbdb4b7c3917ae87af07d441c5bf23a8e"
+  },
+  "status": "done",
+  "t": "2026-10-23 17:38:01"
+ },
+ "sc/sens_linear": {
+  "outputs": {
+   "<repo>\\results\\v2\\v42b_ucparity_2026-10-23\\logs\\s_sens_linear.log": "9a5a8c2ea2c7f7fd24159f0d1023256bef0203d6a399826ceca6f536d364bfa2"
+  },
+  "status": "done",
+  "t": "2026-10-23 15:54:28"
+ },
+ "sc/sens_window": {
+  "outputs": {
+   "<repo>\\results\\v2\\v42b_ucparity_2026-10-23\\logs\\s_sens_window.log": "7f71b35121cc18d3175a692b7e3e7b65372da442076392c71d662022e1f659f7"
+  },
+  "status": "done",
+  "t": "2026-10-23 16:02:13"
+ },
+ "sc/sizing": {
+  "outputs": {
+   "<repo>\\results\\v2\\v42b_ucparity_2026-10-23\\logs\\s_sizing.log": "a234819d90881a09d86b3c84ae652882829cde4ca47258d0248c5acba58144f7"
+  },
+  "status": "done",
+  "t": "2026-10-23 19:52:13"
+ },
+ "sc/tables": {
+  "outputs": {
+   "<repo>\\results\\v2\\v42b_ucparity_2026-10-23\\logs\\s_tables.log": "f27e6ca4a284ad9efe349cad320c7916f2ef820e96d7731c0c64a2daa04bf546"
+  },
+  "status": "done",
+  "t": "2026-10-23 20:53:55"
+ },
+ "sc/verify": {
+  "outputs": {
+   "<repo>\\results\\v2\\v42b_ucparity_2026-10-23\\logs\\s_verify.log": "ae9188c3173a71368572b4bba628b614a3e3441eccdf8ec7ffec8e5e46955798"
+  },
+  "status": "done",
+  "t": "2026-10-23 21:39:53"
+ },
+ "sc/walkforward": {
+  "outputs": {
+   "<repo>\\results\\v2\\v42b_ucparity_2026-10-23\\logs\\s_walkforward.log": "0f8fdf53a62e47a4f620031d36c0795d956ff8e88432711e165cd9d272a5509c"
+  },
+  "status": "done",
+  "t": "2026-10-23 05:16:19"
+ },
+ "sc/walkforward_50": {
+  "outputs": {
+   "<repo>\\results\\v2\\v42b_ucparity_2026-10-23\\logs\\s_walkforward_50.log": "3488035ee30fd8791e99a3f9a53ffb0ed1476d586a7e66d3f0ab29e5a636d7c5"
+  },
+  "status": "done",
+  "t": "2026-10-23 07:55:41"
+ },
+ "sc/walkforward_50_collect": {
+  "outputs": {
+   "<repo>\\results\\v2\\v42b_ucparity_2026-10-23\\logs\\s_walkforward_50_collect.log": "d891844565d7a69e36fbce99d7a57dc358e88903dd7a0c5fd81f0d94ada3f247"
+  },
+  "status": "done",
+  "t": "2026-10-23 07:55:53"
+ },
+ "sc/walkforward_collect": {
+  "outputs": {
+   "<repo>\\results\\v2\\v42b_ucparity_2026-10-23\\logs\\s_walkforward_collect.log": "b6814dc82b409c7c76d34a4783f7d4a7d9cc3d006c82479e2d8aec5dab461e6a"
+  },
+  "status": "done",
+  "t": "2026-10-23 05:16:25"
+ },
+ "sc/week_trace": {
+  "outputs": {
+   "<repo>\\results\\v2\\v42b_ucparity_2026-10-23\\logs\\s_week_trace.log": "985995600115d647e0ccf6b8c41ebe58b0440e39dc9a20a7f38cd5d8ab1416b1"
+  },
+  "status": "done",
+  "t": "2026-10-23 20:53:59"
+ }
+}
